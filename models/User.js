@@ -33,5 +33,9 @@ module.exports = (seq, DataTypes) =>{
             type: DataTypes.STRING(255),
             allowNull: true,
         },
+        Status: {
+            type: DataTypes.ENUM('Active', 'Inactive','Withdrawn'),
+            allowNull: true,
+        },
     });
 }

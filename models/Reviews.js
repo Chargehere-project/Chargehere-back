@@ -1,8 +1,8 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'UserCoupon',
+        'Reviews',
         {
-            UserCouponID: {
+            ReviewID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
@@ -11,26 +11,30 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            CouponID: {
+            ProductID: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            IsUsed: {
-                type: DataTypes.BOOLEAN,
+            Rating: {
+                type: DataTypes.DECIMAL(3, 2), // 예: 4.5와 같은 소수점 포함
                 allowNull: false,
             },
-            IssuedAt: {
+            Content: {
+                type: DataTypes.TEXT,
+                allowNull: false,
+            },
+            ReviewDate: {
                 type: DataTypes.DATEONLY,
                 allowNull: false,
             },
-            UsedAt: {
-                type: DataTypes.DATEONLY,
+            Image: {
+                type: DataTypes.STRING(255),
                 allowNull: true,
             },
         },
         {
-            timestamps: true,
-            tableName: 'UserCoupon',
+            timestamps: true, // createdAt, updatedAt 추가
+            tableName: 'Reviews',
         }
     );
 };

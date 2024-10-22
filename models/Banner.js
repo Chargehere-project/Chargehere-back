@@ -1,28 +1,28 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'Notice',
+        'Banner',
         {
-            NoticeID: {
+            BannerID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-            Title: {
+            BannerName: {
+                type: DataTypes.STRING(100),
+                allowNull: false,
+            },
+            Type: {
+                type: DataTypes.ENUM('Main', 'Shop'),
+                allowNull: false,
+            },
+            BannerImage: {
                 type: DataTypes.STRING(255),
-                allowNull: false,
-            },
-            Content: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-            },
-            PostDate: {
-                type: DataTypes.DATEONLY,
-                allowNull: false,
+                allowNull: true,
             },
         },
         {
             timestamps: false,
-            tableName: 'Notice',
+            tableName: 'Banner',
         }
     );
 };

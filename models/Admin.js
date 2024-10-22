@@ -1,28 +1,28 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'Notice',
+        'Admin',
         {
-            NoticeID: {
+            AdminID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-            Title: {
+            LoginID: {
+                type: DataTypes.STRING(50),
+                allowNull: false,
+            },
+            Name: {
+                type: DataTypes.STRING(100),
+                allowNull: false,
+            },
+            Password: {
                 type: DataTypes.STRING(255),
-                allowNull: false,
-            },
-            Content: {
-                type: DataTypes.TEXT,
-                allowNull: false,
-            },
-            PostDate: {
-                type: DataTypes.DATEONLY,
                 allowNull: false,
             },
         },
         {
             timestamps: false,
-            tableName: 'Notice',
+            tableName: 'Admin',
         }
     );
 };

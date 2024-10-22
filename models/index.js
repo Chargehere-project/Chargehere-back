@@ -5,31 +5,40 @@ const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.js')[env];
 const db = {};
 
-let sequelize  = new Sequelize(config.database, config.username, config.password, config);
+let sequelize = new Sequelize(config.database, config.username, config.password, config);
 
-//모델
-db.User =require('./User')(sequelize, Sequelize)
-db.Notice = require('./Notice')(sequelize,Sequelize)
-db.Coupon = require('./Coupon')(sequelize,Sequelize)
-db.UserCoupon = require('./UserCoupon')(sequelize,Sequelize)
-db.Point = require('./Point')(sequelize,Sequelize)
-db.Inquiry =require('./Inquiries')(sequelize,Sequelize)
-db.InquiryReply = require('./InquiryReplies')(sequelize,Sequelize)
+db.User = require('./User')(sequelize, Sequelize);
+db.Inquiries = require('./Inquiries')(sequelize, Sequelize);
+db.InquiryReplies = require('./InquiryReplies')(sequelize, Sequelize);
+db.Products = require('./Products')(sequelize, Sequelize);
+db.Orders = require('./Orders')(sequelize, Sequelize);
+db.OrderItems = require('./OrderItems')(sequelize, Sequelize);
+db.Transactions = require('./Transactions')(sequelize, Sequelize);
+db.Points = require('./Points')(sequelize, Sequelize);
+db.Coupons = require('./Coupons')(sequelize, Sequelize);
+db.UserCoupon = require('./UserCoupon')(sequelize, Sequelize);
+db.Categories = require('./Categories')(sequelize, Sequelize);
+db.Admin = require('./Admin')(sequelize, Sequelize);
+db.Banner = require('./Banner')(sequelize, Sequelize);
+db.Notice = require('./Notice')(sequelize, Sequelize);
+db.Reviews = require('./Reviews')(sequelize, Sequelize);
 
+// 관계 설정 함수 불러오기
+const applyAssociations = require('./associations');
 
-
-db.User.hasMany(db.UserCoupon,{foreignKey:'UserID', onDelete:'CASCADE'})
-db.UserCoupon.belongsTo(db.User,{foreignKey:'UserID', onDelete:'CASCADE'})
-db.Coupon.hasMany(db.UserCoupon,{foreignKey:'CouponID', onDelete:'CASCADE'})
-db.UserCoupon.belongsTo(db.Coupon,{foreignKey:'CouponID', onDelete:'CASCADE'})
-db.User.hasMany(db.Point,{foreignKey:'UserID', onDelete: 'CASCADE'})
-db.Point.belongsTo(db.User,{foreignKey:'UserID', onDelete:'CASCADE'})
-db.User.hasMany(db.Inquiry,{foreignKey:'UserID', onDelete:'CASCADE'})
-db.Inquiry.belongsTo(db.User,{foreignKey:'UserID', onDelete:'CASCADE'})
-db.Inquiry.hasOne(db.InquiryReply,{foreignKey:'InquiryID', onDelete:'CASCADE'})
-db.InquiryReply.belongsTo(db.Inquiry,{foreignKey:'InquiryID', onDelete:'CASCADE'})
+// 관계 설정 적용
+applyAssociations(db);
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+
+// 데이터베이스 연결 상태 확인
+db.sequelize.authenticate()
+    .then(() => {
+        console.log('Connection has been established successfully.');
+    })
+    .catch(err => {
+        console.error('Unable to connect to the database:', err);
+    });
 
 module.exports = db;

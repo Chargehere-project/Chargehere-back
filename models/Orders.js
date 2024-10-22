@@ -1,8 +1,8 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'UserCoupon',
+        'Orders',
         {
-            UserCouponID: {
+            OrderID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
@@ -11,26 +11,23 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            CouponID: {
-                type: DataTypes.INTEGER,
+            TotalAmount: {
+                type: DataTypes.DECIMAL(10, 2),
                 allowNull: false,
             },
-            IsUsed: {
-                type: DataTypes.BOOLEAN,
-                allowNull: false,
-            },
-            IssuedAt: {
+            OrderDate: {
                 type: DataTypes.DATEONLY,
                 allowNull: false,
             },
-            UsedAt: {
-                type: DataTypes.DATEONLY,
-                allowNull: true,
+            OrderStatus: {
+                type: DataTypes.ENUM('Pending', 'Completed', 'Cancelled'),
+                allowNull: false,
+                defaultValue: 'Pending',
             },
         },
         {
             timestamps: true,
-            tableName: 'UserCoupon',
+            tableName: 'Orders',
         }
     );
 };

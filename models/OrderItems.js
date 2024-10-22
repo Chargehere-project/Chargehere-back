@@ -1,36 +1,32 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'UserCoupon',
+        'OrderItems',
         {
-            UserCouponID: {
+            OrderItemID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-            UserID: {
+            OrderID: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            CouponID: {
+            ProductID: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            IsUsed: {
-                type: DataTypes.BOOLEAN,
+            Quantity: {
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            IssuedAt: {
-                type: DataTypes.DATEONLY,
+            Price: {
+                type: DataTypes.DECIMAL(10, 2),
                 allowNull: false,
-            },
-            UsedAt: {
-                type: DataTypes.DATEONLY,
-                allowNull: true,
             },
         },
         {
             timestamps: true,
-            tableName: 'UserCoupon',
+            tableName: 'OrderItems',
         }
     );
 };

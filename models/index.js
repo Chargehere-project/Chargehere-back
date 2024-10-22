@@ -13,6 +13,8 @@ db.Notice = require('./Notice')(sequelize,Sequelize)
 db.Coupon = require('./Coupon')(sequelize,Sequelize)
 db.UserCoupon = require('./UserCoupon')(sequelize,Sequelize)
 db.Point = require('./Point')(sequelize,Sequelize)
+db.Inquiry =require('./Inquiries')(sequelize,Sequelize)
+db.InquiryReply = require('./InquiryReplies')(sequelize,Sequelize)
 
 
 
@@ -22,7 +24,10 @@ db.Coupon.hasMany(db.UserCoupon,{foreignKey:'CouponID', onDelete:'CASCADE'})
 db.UserCoupon.belongsTo(db.Coupon,{foreignKey:'CouponID', onDelete:'CASCADE'})
 db.User.hasMany(db.Point,{foreignKey:'UserID', onDelete: 'CASCADE'})
 db.Point.belongsTo(db.User,{foreignKey:'UserID', onDelete:'CASCADE'})
-
+db.User.hasMany(db.Inquiry,{foreignKey:'UserID', onDelete:'CASCADE'})
+db.Inquiry.belongsTo(db.User,{foreignKey:'UserID', onDelete:'CASCADE'})
+db.Inquiry.hasOne(db.InquiryReply,{foreignKey:'InquiryID', onDelete:'CASCADE'})
+db.InquiryReply.belongsTo(db.Inquiry,{foreignKey:'InquiryID', onDelete:'CASCADE'})
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

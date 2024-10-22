@@ -1,20 +1,23 @@
-require('dotenv').config()
-const express = require('express')
-const db= require('./models')
-const app = express()
+require('dotenv').config();
+const express = require('express');
+const db = require('./models');
+const app = express();
 const PORT = 8000;
 const cors = require('cors');
 
-
-app.use(cors({
-    origin: 'http://localhost:3000' ,
-    credentials: true
-  }));
+app.use(
+    cors({
+        origin: 'http://localhost:3000',
+        credentials: true,
+    })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const router = require('./routes')
-app.use("/",router)
+const router = require('./routes/front');
+app.use('/', router);
+const adminRouter = require('./routes/admin')
+app.use('/api', adminRouter)
 
 db.sequelize.sync({ force: true }).then(() => {
     app.listen(PORT, () => {

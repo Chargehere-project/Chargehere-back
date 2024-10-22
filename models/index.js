@@ -7,10 +7,21 @@ const db = {};
 
 let sequelize = new Sequelize(config.database, config.username, config.password, config);
 
-// 모델 불러오기
 db.User = require('./User')(sequelize, Sequelize);
-db.Inquiries = require('./Inquiries')(sequelize, Sequelize); // 수정된 부분
+db.Inquiries = require('./Inquiries')(sequelize, Sequelize);
 db.InquiryReplies = require('./InquiryReplies')(sequelize, Sequelize);
+db.Products = require('./Products')(sequelize, Sequelize);
+db.Orders = require('./Orders')(sequelize, Sequelize);
+db.OrderItems = require('./OrderItems')(sequelize, Sequelize);
+db.Transactions = require('./Transactions')(sequelize, Sequelize);
+db.Points = require('./Points')(sequelize, Sequelize);
+db.Coupons = require('./Coupons')(sequelize, Sequelize);
+db.UserCoupon = require('./UserCoupon')(sequelize, Sequelize);
+db.Categories = require('./Categories')(sequelize, Sequelize);
+db.Admin = require('./Admin')(sequelize, Sequelize);
+db.Banner = require('./Banner')(sequelize, Sequelize);
+db.Notice = require('./Notice')(sequelize, Sequelize);
+db.Reviews = require('./Reviews')(sequelize, Sequelize);
 
 // 관계 설정 함수 불러오기
 const applyAssociations = require('./associations');
@@ -20,5 +31,14 @@ applyAssociations(db);
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+
+// 데이터베이스 연결 상태 확인
+db.sequelize.authenticate()
+    .then(() => {
+        console.log('Connection has been established successfully.');
+    })
+    .catch(err => {
+        console.error('Unable to connect to the database:', err);
+    });
 
 module.exports = db;

@@ -42,6 +42,7 @@ module.exports = (seq, DataTypes) => {
             },
         },
         {
+            freezeTableName: true,
             timestamps: true, // createdAt, updatedAt 필드가 자동으로 추가됩니다.
             tableName: 'User', // 데이터베이스 테이블 이름 명시
         }

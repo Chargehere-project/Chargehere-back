@@ -13,7 +13,7 @@ module.exports = (seq, DataTypes) => {
             },
             TransactionID: {
                 type: DataTypes.INTEGER,
-                allowNull: false,
+                allowNull: true,
             },
             ChargeDate: {
                 type: DataTypes.DATEONLY,

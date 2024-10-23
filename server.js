@@ -19,7 +19,7 @@ app.use('/', router);
 const adminRouter = require('./routes/admin')
 app.use('/api', adminRouter)
 
-db.sequelize.sync({ force: true }).then(() => {
+db.sequelize.sync({ alter: true }).then(() => {
     app.listen(PORT, () => {
         console.log(`http://localhost:${PORT}`);
     });

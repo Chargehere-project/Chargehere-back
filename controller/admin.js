@@ -105,26 +105,33 @@ const getInquiries = async (req, res) => {
 
     let whereCondition = {}; // 검색 조건을 담을 객체
 
-    // 검색 조건 추가
+    // 회원 ID 또는 문의 내용으로 검색
     if (searchType && searchValue) {
+        // 검색 유형이 'UserID'일 경우
         if (searchType === 'UserId') {
-            whereCondition.UserId = { [Op.like]: `%${searchValue}%` };
-        } else if (searchType === 'Content') {
+            whereCondition.UserID = { [Op.like]: `%${searchValue}%` };
+        } 
+        // 검색 유형이 'Content'일 경우
+        else if (searchType === 'Content') {
             whereCondition.Content = { [Op.like]: `%${searchValue}%` };
+        } 
+        // 검색 유형이 'Title'일 경우
+        else if (searchType === 'Title') {
+            whereCondition.Title = { [Op.like]: `%${searchValue}%` };
         }
     }
 
-    // 작성 기간 필터링
+    // 작성 기간 필터링 (startDate, endDate가 있을 경우)
     if (startDate && endDate) {
         whereCondition.CreatedAt = { [Op.between]: [new Date(startDate), new Date(endDate)] };
     }
 
-    // 문의 상태 필터링
+    // 문의 상태 필터링 (status가 있을 경우)
     if (status) {
         whereCondition.Status = status;
     }
 
-    // 문의 유형 필터링
+    // 문의 유형 필터링 (inquiryType이 있을 경우)
     if (inquiryType) {
         whereCondition.InquiryType = inquiryType;
     }
@@ -134,25 +141,26 @@ const getInquiries = async (req, res) => {
     try {
         const { count, rows } = await Inquiries.findAndCountAll({
             where: whereCondition,
-            include: [{ model: User, attributes: ['LoginID'] }],
+            include: [{ model: User, attributes: ['LoginID'] }], // 회원 정보와 조인
             limit: parseInt(limit),
             offset: parseInt(offset),
-            order: [['InquiryID', 'DESC']],
+            order: [['InquiryID', 'DESC']], // 최신순 정렬
         });
 
         const totalPages = Math.ceil(count / limit);
 
         res.json({
-            inquiries: rows,
-            totalItems: count,
-            totalPages,
-            currentPage: parseInt(page),
+            inquiries: rows, // 현재 페이지의 문의 목록
+            totalItems: count, // 전체 문의 수
+            totalPages, // 전체 페이지 수
+            currentPage: parseInt(page), // 현재 페이지
         });
     } catch (error) {
         console.error('문의 목록 가져오기 실패:', error);
         res.status(500).json({ message: '문의 목록 가져오기 실패' });
     }
 };
+
 
 
 

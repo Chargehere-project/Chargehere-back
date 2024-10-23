@@ -18,13 +18,13 @@ app.use(express.urlencoded({ extended: true }));
 
 const router = require('./routes/front');
 app.use('/', router);
-const adminRouter = require('./routes/admin')
-app.use('/api', adminRouter)
+const adminRouter = require('./routes/admin') 
+app.use('/api/admin', adminRouter)
 
 
 // Sequelize 동기화 (alter 옵션 사용하여 테이블 구조 동기화)
 db.sequelize
-    .sync({ alter: true })
+    .sync({ force: false })
     .then(() => {
         console.log('데이터베이스가 동기화되었습니다.');
 

@@ -21,6 +21,7 @@ app.use('/', router);
 const adminRouter = require('./routes/admin')
 app.use('/api', adminRouter)
 
+
 // Sequelize 동기화 (alter 옵션 사용하여 테이블 구조 동기화)
 db.sequelize
     .sync({ alter: true })

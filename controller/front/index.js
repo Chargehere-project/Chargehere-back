@@ -1,4 +1,5 @@
-const { User, Notice } = require('../../models');
+const { User, Notice, Points } = require('../../models');
+const jwt = require('jsonwebtoken')
 
 const signup = async (req, res) => {
     console.log(req.body, '회원가입');
@@ -9,13 +10,14 @@ const signup = async (req, res) => {
         Name: name,
         Address: residence,
         phone: phone,
-        Point: 0,
+        Points: 0,
         JoinDate: new Date(),
     });
     res.json({ result: true });
 };
 const login = async (req, res) => {
     try {
+        console.log(req.body, '로그인');
         const { id, password } = req.body;
         const find = await User.findOne({ where: { LoginID:id } });
         if (find) {
@@ -63,4 +65,31 @@ const notice = async (req, res) => {
     }
 };
 
-module.exports = { signup, login, notice };
+const everydayevent = async (req,res) =>{
+    try{
+        console.log(req.body, '출석이벤트');
+        const { points,reward } = req.body;
+        const userId = req.user.UserID;  // 미들웨어에서 설정한 user 정보 사용
+        const user = await User.findByPk(userId);
+
+        const result = await Points.create({
+            UserID: userId,
+            TransactionID: null,
+            ChargeDate: new Date(),
+            ChargeType: 'Earned',
+            Amount: points,
+            Description: '출석이벤트',
+        })
+
+        user.Points += points
+        await user.save();
+        res.json({result:true,message:'포인트 지급 성공'})
+
+    }
+    catch (error) {
+        console.error('포인트 지급 오류',error)
+        res.status(500).json({result:false, message:'서버 오류'})
+    }
+}
+
+module.exports = { signup, login, notice, everydayevent };

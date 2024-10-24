@@ -11,8 +11,17 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.STRING(100),
                 allowNull: false,
             },
+            DiscountAmount: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+            },
+            StartDate: {
+                type: DataTypes.DATE,
+                allowNull: false,
+                defaultValue: DataTypes.NOW,
+            },
             ExpirationDate: {
-                type: DataTypes.DATEONLY,
+                type: DataTypes.DATE,
                 allowNull: false,
             },
         },

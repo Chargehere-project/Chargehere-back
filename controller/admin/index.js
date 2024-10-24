@@ -1,5 +1,7 @@
-const { User, Inquiries, InquiryReplies, Points } = require('../../models');
+const { User, Inquiries, InquiryReplies, Points, Coupons, UserCoupon } = require('../../models');
 const { Op } = require('sequelize');
+const { Sequelize } = require('sequelize');  // Sequelize 모듈을 가져옵니다.
+
 
 // 유저 검색 기능
 const searchUsers = async (req, res) => {
@@ -103,11 +105,14 @@ const updateUser = async (req, res) => {
 const getInquiries = async (req, res) => {
     const { searchType, searchValue, startDate, endDate, status, inquiryType, page = 1, limit = 10 } = req.query;
 
+    // 전달된 쿼리 파라미터를 콘솔에 출력하여 확인
+    console.log(req.query);
+
     let whereCondition = {}; // 검색 조건을 담을 객체
 
     // 회원 ID 또는 문의 내용으로 검색
     if (searchType && searchValue) {
-        // 검색 유형이 'UserID'일 경우
+        // 검색 유형이 'UserId'일 경우
         if (searchType === 'UserId') {
             whereCondition.UserID = { [Op.like]: `%${searchValue}%` };
         }
@@ -160,6 +165,7 @@ const getInquiries = async (req, res) => {
         res.status(500).json({ message: '문의 목록 가져오기 실패' });
     }
 };
+
 
 // 새로운 문의 생성 기능
 const createInquiry = async (req, res) => {
@@ -401,6 +407,167 @@ const searchPoints = async (req, res) => {
     }
 };
 
+// 새로운 쿠폰 생성
+const createCoupon = async (req, res) => {
+    const { name, discountAmount, startDate, expiry } = req.body;
+
+    try {
+        const existingCoupon = await Coupons.findOne({ where: { CouponName: name } });
+        if (existingCoupon) {
+            return res.status(400).json({ message: '중복된 쿠폰명이 있습니다.' });
+        }
+
+        const newCoupon = await Coupons.create({
+            CouponName: name,
+            DiscountAmount: discountAmount,
+            StartDate: new Date(startDate),
+            ExpirationDate: new Date(expiry),
+        });
+
+        res.json({ message: '쿠폰이 성공적으로 생성되었습니다.', coupon: newCoupon });
+    } catch (error) {
+        res.status(500).json({ message: '쿠폰 생성 실패', error });
+    }
+};
+
+// 사용자에게 쿠폰 발급 또는 사용 시 유효기간 확인 로직 추가
+const issueCoupon = async (req, res) => {
+    const { userID, couponID } = req.body;
+
+    try {
+        // 쿠폰 정보를 조회
+        const coupon = await Coupons.findByPk(couponID);
+        if (!coupon) {
+            return res.status(404).json({ message: '해당 쿠폰을 찾을 수 없습니다.' });
+        }
+
+        // 현재 날짜와 쿠폰 유효기간 비교
+        const now = new Date();
+        const expirationDate = new Date(coupon.ExpirationDate);
+
+        // 쿠폰이 만료된 경우
+        if (now > expirationDate) {
+            return res.status(400).json({ message: '이 쿠폰은 유효기간이 만료되었습니다.' });
+        }
+
+        // 유저 조회
+        const user = await User.findByPk(userID);
+        if (!user) {
+            return res.status(404).json({ message: '해당 유저를 찾을 수 없습니다.' });
+        }
+
+        // 쿠폰 발급 처리
+        const issuedCoupon = await UserCoupon.create({
+            UserID: userID,
+            CouponID: couponID,
+            IssuedAt: now,
+            IsUsed: false,
+        });
+
+        res.json({ message: '쿠폰이 성공적으로 발급되었습니다.', userCoupon: issuedCoupon });
+    } catch (error) {
+        res.status(500).json({ message: '쿠폰 발급 실패', error });
+    }
+};
+
+
+// 쿠폰 리스트 조회
+const getCoupons = async (req, res) => {
+    try {
+        const coupons = await Coupons.findAll({
+            include: [
+                {
+                    model: UserCoupon,
+                    attributes: ['IsUsed'],
+                },
+            ],
+        });
+
+        const couponList = coupons.map((coupon) => {
+            const usedCount = coupon.UserCoupons.filter((uc) => uc.IsUsed).length;
+            return {
+                ...coupon.get(),
+                usedCount, // 사용된 쿠폰 수
+            };
+        });
+
+        res.json({ coupons: couponList });
+    } catch (error) {
+        console.error('쿠폰 리스트 조회 실패:', error.message);
+        res.status(500).json({ message: '쿠폰 리스트 조회 실패', error: error.message });
+    }
+};
+
+
+
+// 특정 쿠폰 수정
+// 쿠폰 수정 API
+const editCoupon = async (req, res) => {
+    const { couponID } = req.params; // 요청 경로에서 couponID 가져옴
+    const { name, discountAmount, startDate, expiry } = req.body; // 요청 본문에서 수정할 내용 가져옴
+
+    try {
+        // 쿠폰ID로 해당 쿠폰 찾기
+        const coupon = await Coupons.findByPk(couponID);
+        if (!coupon) {
+            return res.status(404).json({ message: '해당 쿠폰을 찾을 수 없습니다.' });
+        }
+
+        // 쿠폰 정보 업데이트
+        coupon.CouponName = name;
+        coupon.DiscountAmount = discountAmount;
+        coupon.StartDate = new Date(startDate);
+        coupon.ExpirationDate = new Date(expiry);
+
+        await coupon.save(); // 수정된 쿠폰 정보 저장
+
+        res.json({ message: '쿠폰이 성공적으로 수정되었습니다.', coupon });
+    } catch (error) {
+        console.error('쿠폰 수정 실패:', error.message); // 오류 로그 출력
+        res.status(500).json({ message: '쿠폰 수정 실패', error: error.message });
+    }
+};
+
+module.exports = {
+    editCoupon,
+};
+
+
+// 발급된 쿠폰 조회
+const getIssuedCoupons = async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    try {
+        const { count, rows } = await UserCoupon.findAndCountAll({
+            include: [
+                { model: User, attributes: ['LoginID', 'Name'] }, // 유저 정보 포함
+                { model: Coupons, attributes: ['CouponName'] }, // 쿠폰 정보 포함
+            ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [
+                // 쿠폰이 사용되었을 경우 사용일 기준, 그렇지 않으면 발급일 기준으로 정렬
+                [Sequelize.literal('CASE WHEN `IsUsed` = 1 THEN `UsedAt` ELSE `IssuedAt` END'), 'DESC'],
+            ],
+        });
+
+        const totalPages = Math.ceil(count / limit);
+
+        res.json({
+            issuedCoupons: rows,
+            totalPages,
+            currentPage: parseInt(page),
+        });
+    } catch (error) {
+        console.error('쿠폰 사용 목록 조회 실패:', error.message);
+        res.status(500).json({ message: '발급된 쿠폰 목록 조회 실패', error });
+    }
+};
+
+
+
+
 module.exports = {
     searchUsers,
     getAllUsers,
@@ -415,4 +582,9 @@ module.exports = {
     updatePoints, // 포인트 변경 기능 추가
     cancelPoints,
     searchPoints,
+    createCoupon,
+    issueCoupon,
+    getCoupons,
+    editCoupon,
+    getIssuedCoupons,
 };

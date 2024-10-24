@@ -14,6 +14,11 @@ const {
     updatePoints, // 포인트 변경 API 추가
     cancelPoints,
     searchPoints,
+    createCoupon,
+    issueCoupon,
+    getCoupons,
+    editCoupon,
+    getIssuedCoupons,
 } = require('../../controller/admin'); // 관리자 관련 컨트롤러 가져오기
 
 // 관리자 관련 API 라우터 (유저 관리)
@@ -35,5 +40,19 @@ router.post('/points', updatePoints); // 포인트 추가/차감
 router.post('/points/cancel', cancelPoints);
 // 포인트 검색 라우터 설정
 router.get('/points/search', searchPoints);
+// 쿠폰 생성
+router.post('/coupons', createCoupon);
+
+// 쿠폰 발급
+router.post('/coupons/issue', issueCoupon);
+
+// 쿠폰 리스트 조회 (페이지네이션)
+router.get('/coupons', getCoupons);
+
+// 쿠폰 수정
+router.put('/coupons/:couponID', editCoupon);
+
+// 발급된 쿠폰 리스트 조회 (페이지네이션)
+router.get('/coupons/issued', getIssuedCoupons);
 
 module.exports = router;

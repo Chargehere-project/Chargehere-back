@@ -11,8 +11,8 @@ db.User = require('./User')(sequelize, Sequelize);
 db.Inquiries = require('./Inquiries')(sequelize, Sequelize);
 db.InquiryReplies = require('./InquiryReplies')(sequelize, Sequelize);
 db.Products = require('./Products')(sequelize, Sequelize);
-db.Orders = require('./Orders')(sequelize, Sequelize);
-db.OrderItems = require('./OrderItems')(sequelize, Sequelize);
+db.OrderList = require('./OrderList')(sequelize, Sequelize);
+db.Cart = require('./Cart')(sequelize, Sequelize);
 db.Transactions = require('./Transactions')(sequelize, Sequelize);
 db.Points = require('./Points')(sequelize, Sequelize);
 db.Coupons = require('./Coupons')(sequelize, Sequelize);
@@ -22,6 +22,8 @@ db.Admin = require('./Admin')(sequelize, Sequelize);
 db.Banner = require('./Banner')(sequelize, Sequelize);
 db.Notice = require('./Notice')(sequelize, Sequelize);
 db.Reviews = require('./Reviews')(sequelize, Sequelize);
+db.QnA = require('./QnA')(sequelize, Sequelize);
+db.QnAReplies = require('./QnAReplies')(sequelize, Sequelize);
 
 // 관계 설정 함수 불러오기
 const applyAssociations = require('./associations');

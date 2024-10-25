@@ -9,49 +9,49 @@ module.exports = (seq, DataTypes) => {
             },
             UserID: {
                 type: DataTypes.INTEGER,
-                allowNull: false,
+                allowNull: false, // 트랜잭션은 반드시 유저와 연관되어야 함
             },
             OrderID: {
                 type: DataTypes.INTEGER,
-                allowNull: false,
+                allowNull: false, // 트랜잭션은 반드시 주문과 연관되어야 함
             },
             TotalAmount: {
                 type: DataTypes.DECIMAL(10, 2),
-                allowNull: false,
+                allowNull: false, // 전체 결제 금액 (포인트 포함)
             },
             PaymentAmount: {
                 type: DataTypes.DECIMAL(10, 2),
-                allowNull: false,
+                allowNull: false, // 실제 결제된 금액
             },
             PointUsed: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: true, // 사용된 포인트, 있을 수도 있고 없을 수도 있음
             },
             PointEarned: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: true, // 적립된 포인트
             },
             PaymentMethod: {
                 type: DataTypes.ENUM('Card', 'Cash', 'Points', 'Mixed'),
-                allowNull: false,
+                allowNull: false, // 결제 방법 (카드, 현금, 포인트 또는 혼합)
             },
             TransactionDate: {
                 type: DataTypes.DATEONLY,
-                allowNull: false,
+                allowNull: false, // 트랜잭션 발생 날짜
             },
             Status: {
                 type: DataTypes.ENUM('Completed', 'Refunded', 'Cancelled'),
                 allowNull: false,
-                defaultValue: 'Completed',
+                defaultValue: 'Completed', // 기본 상태는 완료
             },
             RefundReason: {
                 type: DataTypes.STRING(255),
-                allowNull: true,
+                allowNull: true, // 환불 사유는 선택 사항
             },
         },
         {
-            timestamps: true,
-            tableName: 'Transactions',
+            timestamps: true, // 타임스탬프 추가
+            tableName: 'Transactions', // 테이블 이름을 'Transactions'로 설정
         }
     );
 };

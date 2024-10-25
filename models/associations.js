@@ -4,8 +4,8 @@ const applyAssociations = (db) => {
         Inquiries,
         InquiryReplies,
         Products,
-        Orders,
-        OrderItems,
+        OrderList,
+        Cart,
         Transactions,
         Points,
         Coupons,
@@ -15,20 +15,24 @@ const applyAssociations = (db) => {
         Banner,
         Notice,
         Reviews,
+        QnA,
+        QnAReplies,
     } = db;
 
-    // 기존 관계 설정
+    // 사용자와 문의(1:N) - ON DELETE SET NULL 적용
     User.hasMany(Inquiries, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
-        onDelete: 'CASCADE',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
     });
 
     Inquiries.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
     });
 
+    // 문의와 문의 답변(1:N)
     Inquiries.hasMany(InquiryReplies, {
         foreignKey: 'InquiryID',
         sourceKey: 'InquiryID',
@@ -40,39 +44,68 @@ const applyAssociations = (db) => {
         targetKey: 'InquiryID',
     });
 
-    User.hasMany(Orders, {
+    // 사용자와 QnA(1:N) - ON DELETE SET NULL 적용
+    User.hasMany(QnA, {
+        foreignKey: 'UserID',
+        sourceKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+    });
+
+    QnA.belongsTo(User, {
+        foreignKey: 'UserID',
+        targetKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+    });
+
+    // QnA와 QnA 답변(1:N)
+    QnA.hasMany(QnAReplies, {
+        foreignKey: 'QnAID',
+        sourceKey: 'QnAID',
+        onDelete: 'CASCADE',
+    });
+
+    QnAReplies.belongsTo(QnA, {
+        foreignKey: 'QnAID',
+        targetKey: 'QnAID',
+    });
+
+    // 사용자와 주문 목록(1:N)
+    User.hasMany(OrderList, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
         onDelete: 'CASCADE',
     });
 
-    Orders.belongsTo(User, {
+    OrderList.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
     });
 
-    Orders.hasMany(OrderItems, {
-        foreignKey: 'OrderID',
-        sourceKey: 'OrderID',
+    // 주문 목록과 장바구니(1:N)
+    OrderList.hasMany(Cart, {
+        foreignKey: 'OrderListID',
+        sourceKey: 'OrderListID',
         onDelete: 'CASCADE',
     });
 
-    OrderItems.belongsTo(Orders, {
-        foreignKey: 'OrderID',
-        targetKey: 'OrderID',
+    Cart.belongsTo(OrderList, {
+        foreignKey: 'OrderListID',
+        targetKey: 'OrderListID',
     });
 
-    Products.hasMany(OrderItems, {
+    // 상품과 장바구니(1:N)
+    Products.hasMany(Cart, {
         foreignKey: 'ProductID',
         sourceKey: 'ProductID',
         onDelete: 'CASCADE',
     });
 
-    OrderItems.belongsTo(Products, {
+    Cart.belongsTo(Products, {
         foreignKey: 'ProductID',
         targetKey: 'ProductID',
     });
 
+    // 사용자와 트랜잭션(1:N)
     User.hasMany(Transactions, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -84,18 +117,19 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    Orders.hasOne(Transactions, {
-        foreignKey: 'OrderID',
-        sourceKey: 'OrderID',
+    // 주문 목록과 트랜잭션(1:1)
+    OrderList.hasOne(Transactions, {
+        foreignKey: 'OrderListID',
+        sourceKey: 'OrderListID',
         onDelete: 'CASCADE',
     });
 
-    Transactions.belongsTo(Orders, {
-        foreignKey: 'OrderID',
-        targetKey: 'OrderID',
+    Transactions.belongsTo(OrderList, {
+        foreignKey: 'OrderListID',
+        targetKey: 'OrderListID',
     });
 
-    // 변경된 관계 설정: User와 Points 간의 충돌 방지
+    // 사용자와 포인트(1:N)
     User.hasMany(Points, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -108,6 +142,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
+    // 트랜잭션과 포인트(1:N)
     Transactions.hasMany(Points, {
         foreignKey: 'TransactionID',
         sourceKey: 'TransactionID',
@@ -119,6 +154,7 @@ const applyAssociations = (db) => {
         targetKey: 'TransactionID',
     });
 
+    // 사용자와 쿠폰(1:N)
     User.hasMany(UserCoupon, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -130,6 +166,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
+    // 쿠폰과 사용자 쿠폰(1:N)
     Coupons.hasMany(UserCoupon, {
         foreignKey: 'CouponID',
         sourceKey: 'CouponID',
@@ -141,7 +178,7 @@ const applyAssociations = (db) => {
         targetKey: 'CouponID',
     });
 
-    // Products와 Categories의 관계 (1:N)
+    // 상품과 카테고리(1:N)
     Categories.hasMany(Products, {
         foreignKey: 'CategoryID',
         sourceKey: 'CategoryID',
@@ -153,7 +190,7 @@ const applyAssociations = (db) => {
         targetKey: 'CategoryID',
     });
 
-    // Admin과 Notice의 관계 (1:N)
+    // 관리자와 공지사항(1:N)
     Admin.hasMany(Notice, {
         foreignKey: 'AdminID',
         sourceKey: 'AdminID',
@@ -165,7 +202,7 @@ const applyAssociations = (db) => {
         targetKey: 'AdminID',
     });
 
-    // Admin과 Banner의 관계 (1:N)
+    // 관리자와 배너(1:N)
     Admin.hasMany(Banner, {
         foreignKey: 'AdminID',
         sourceKey: 'AdminID',
@@ -177,6 +214,7 @@ const applyAssociations = (db) => {
         targetKey: 'AdminID',
     });
 
+    // 사용자와 리뷰(1:N)
     User.hasMany(Reviews, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -188,6 +226,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
+    // 상품과 리뷰(1:N)
     Products.hasMany(Reviews, {
         foreignKey: 'ProductID',
         sourceKey: 'ProductID',

@@ -1,11 +1,15 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'Orders',
+        'OrderList', // 모델 이름을 OrderList로 변경
         {
-            OrderID: {
+            OrderListID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
+            },
+            TransactionID: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
             },
             UserID: {
                 type: DataTypes.INTEGER,
@@ -26,8 +30,8 @@ module.exports = (seq, DataTypes) => {
             },
         },
         {
-            timestamps: true,
-            tableName: 'Orders',
+            timestamps: true, // 타임스탬프 유지
+            tableName: 'OrderList', // 테이블 이름을 'OrderList'로 설정
         }
     );
 };

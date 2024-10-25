@@ -19,6 +19,7 @@ const {
     getCoupons,
     editCoupon,
     getIssuedCoupons,
+    updateCouponStatus,
 } = require('../../controller/admin'); // 관리자 관련 컨트롤러 가져오기
 
 // 관리자 관련 API 라우터 (유저 관리)
@@ -54,5 +55,9 @@ router.put('/coupons/:couponID', editCoupon);
 
 // 발급된 쿠폰 리스트 조회 (페이지네이션)
 router.get('/coupons/issued', getIssuedCoupons);
+
+// 쿠폰 상태 업데이트 라우터
+router.put('/coupons/:id/status', updateCouponStatus);
+
 
 module.exports = router;

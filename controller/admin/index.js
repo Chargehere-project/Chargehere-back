@@ -408,27 +408,45 @@ const searchPoints = async (req, res) => {
 };
 
 // 새로운 쿠폰 생성
+// 쿠폰 생성 로직
 const createCoupon = async (req, res) => {
-    const { name, discountAmount, startDate, expiry } = req.body;
+    const { name, discountAmount, startDate, expiry, status } = req.body;
+
+    // 입력값 확인 로그
+    console.log('쿠폰 생성 요청 받음:', req.body);
 
     try {
+        // 쿠폰 중복 확인
         const existingCoupon = await Coupons.findOne({ where: { CouponName: name } });
+        
         if (existingCoupon) {
+            // 중복 쿠폰 확인 로그
+            console.log('중복된 쿠폰명 발견:', name);
             return res.status(400).json({ message: '중복된 쿠폰명이 있습니다.' });
         }
 
+        // 새로운 쿠폰 생성
         const newCoupon = await Coupons.create({
             CouponName: name,
             DiscountAmount: discountAmount,
             StartDate: new Date(startDate),
             ExpirationDate: new Date(expiry),
+            Status: status // status 필드 추가
         });
+
+        // 성공 로그
+        console.log('새로운 쿠폰 생성 성공:', newCoupon);
 
         res.json({ message: '쿠폰이 성공적으로 생성되었습니다.', coupon: newCoupon });
     } catch (error) {
+        // 에러 로그
+        console.error('쿠폰 생성 중 에러 발생:', error);
         res.status(500).json({ message: '쿠폰 생성 실패', error });
     }
 };
+
+
+
 
 // 사용자에게 쿠폰 발급 또는 사용 시 유효기간 확인 로직 추가
 const issueCoupon = async (req, res) => {
@@ -528,11 +546,6 @@ const editCoupon = async (req, res) => {
     }
 };
 
-module.exports = {
-    editCoupon,
-};
-
-
 // 발급된 쿠폰 조회
 const getIssuedCoupons = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
@@ -565,6 +578,33 @@ const getIssuedCoupons = async (req, res) => {
     }
 };
 
+// 백엔드 쿠폰 상태 업데이트 컨트롤러
+// 쿠폰 상태 업데이트 컨트롤러 (findByPk와 save 사용)
+const updateCouponStatus = async (req, res) => {
+    const { id } = req.params; // 요청 경로에서 쿠폰 ID 가져옴
+    const { status } = req.body; // 요청 본문에서 변경할 상태값 가져옴
+
+    try {
+        // 쿠폰 ID로 해당 쿠폰 찾기
+        const coupon = await Coupons.findByPk(id);
+        if (!coupon) {
+            return res.status(404).json({ message: '쿠폰을 찾을 수 없습니다.' });
+        }
+
+        // 쿠폰 상태 업데이트
+        coupon.Status = status;
+
+        // 변경 사항 저장
+        await coupon.save();
+
+        console.log("쿠폰 상태가 성공적으로 업데이트되었습니다:", coupon.Status);
+        res.json({ message: '쿠폰 상태가 성공적으로 업데이트되었습니다.', coupon });
+    } catch (error) {
+        console.error('쿠폰 상태 업데이트 실패:', error.stack); // 전체 오류 스택 출력
+        res.status(500).json({ message: '쿠폰 상태 업데이트 실패', error });
+    }
+};
+
 
 
 
@@ -587,4 +627,5 @@ module.exports = {
     getCoupons,
     editCoupon,
     getIssuedCoupons,
+    updateCouponStatus,
 };

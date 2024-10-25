@@ -50,7 +50,7 @@ const login = async (req, res) => {
 const notice = async (req, res) => {
     try {
         const result = await Notice.findOne({
-            order: [['createdAt', 'DESC']],
+            order: [['NoticeID', 'DESC']],
             attributes: ['Title'],
         });
 
@@ -64,6 +64,20 @@ const notice = async (req, res) => {
         res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
     }
 };
+const notices = async (req,res) => {
+    try{
+        const result = await Notice.findAll({
+            order: [['NoticeID', 'DESC']],
+            attributes: ['NoticeID', 'Title', 'PostDate']
+        })
+        res.json({result})
+    }
+    catch(error){
+        console.error('공지사항 조회 오류', error);
+        res.status(500).json({result: false, message:'공지사항 조회 오류'})
+        
+    }
+}
 
 const everydayevent = async (req,res) =>{
     try{
@@ -92,4 +106,19 @@ const everydayevent = async (req,res) =>{
     }
 }
 
-module.exports = { signup, login, notice, everydayevent };
+const getChargers = async (req, res) => {
+    try {
+        const response = await axios.get('http://apis.data.go.kr/B552584/EvCharger/getChargerStatus', {
+            params: {
+                serviceKey: process.env.SERVICEKEY,
+                ...req.query
+            }
+        });
+        res.json(response.data);
+    } catch (error) {
+        console.error('충전소 데이터 조회 오류:', error);
+        res.status(500).json({ error: '충전소 데이터 조회 실패' });
+    }
+};
+
+module.exports = { signup, login, notice, everydayevent, notices, getChargers };

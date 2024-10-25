@@ -1,15 +1,15 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define(
-        'Inquiries',
+        'QnA',
         {
-            InquiryID: {
+            QnAID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
             UserID: {
                 type: DataTypes.INTEGER,
-                allowNull: true,
+                allowNull: true, // UserID는 null 가능
             },
             Title: {
                 type: DataTypes.STRING(255),
@@ -20,8 +20,8 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: 'Pending',
             },
-            InquiryType: {
-                type: DataTypes.ENUM('EV', 'Shop'),
+            Content: {
+                type: DataTypes.TEXT,
                 allowNull: true,
             },
             CreatedAt: {
@@ -29,14 +29,10 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true,
                 defaultValue: DataTypes.NOW,
             },
-            Content: {
-                type: DataTypes.TEXT,
-                allowNull: true,
-            },
         },
         {
             timestamps: false,
-            tableName: 'Inquiries',
+            tableName: 'QnA',
         }
     );
 };

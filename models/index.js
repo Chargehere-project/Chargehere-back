@@ -22,6 +22,8 @@ db.Admin = require('./Admin')(sequelize, Sequelize);
 db.Banner = require('./Banner')(sequelize, Sequelize);
 db.Notice = require('./Notice')(sequelize, Sequelize);
 db.Reviews = require('./Reviews')(sequelize, Sequelize);
+db.QnA = require('./QnA')(sequelize, Sequelize);
+db.QnAReplies = require('./QnAReplies')(sequelize, Sequelize);
 
 // 관계 설정 함수 불러오기
 const applyAssociations = require('./associations');

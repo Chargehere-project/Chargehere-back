@@ -491,25 +491,56 @@ const issueCoupon = async (req, res) => {
 
 // 쿠폰 리스트 조회
 const getCoupons = async (req, res) => {
+    const { page = 1, limit = 10, name, status, startDate, endDate } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereCondition = {};
+
+    // 쿠폰명으로 검색
+    if (name) {
+        whereCondition.CouponName = { [Op.like]: `%${name}%` };
+    }
+
+    // 상태 필터링 (active, expired, deleted 등)
+    if (status) {
+        whereCondition.Status = status;
+    }
+
+    // 시작일과 종료일 범위 필터링
+    if (startDate && endDate) {
+        whereCondition.StartDate = { [Op.between]: [new Date(startDate), new Date(endDate)] };
+    }
+
     try {
-        const coupons = await Coupons.findAll({
+        const { count, rows } = await Coupons.findAndCountAll({
+            where: whereCondition,
             include: [
                 {
                     model: UserCoupon,
                     attributes: ['IsUsed'],
                 },
             ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['createdAt', 'DESC']], // 최신순 정렬
         });
 
-        const couponList = coupons.map((coupon) => {
+        // 사용된 쿠폰 수 계산
+        const couponList = rows.map((coupon) => {
             const usedCount = coupon.UserCoupons.filter((uc) => uc.IsUsed).length;
             return {
                 ...coupon.get(),
-                usedCount, // 사용된 쿠폰 수
+                usedCount,
             };
         });
 
-        res.json({ coupons: couponList });
+        const totalPages = Math.ceil(count / limit);
+
+        res.json({
+            coupons: couponList,
+            totalPages,
+            currentPage: parseInt(page),
+        });
     } catch (error) {
         console.error('쿠폰 리스트 조회 실패:', error.message);
         res.status(500).json({ message: '쿠폰 리스트 조회 실패', error: error.message });
@@ -518,11 +549,12 @@ const getCoupons = async (req, res) => {
 
 
 
+
 // 특정 쿠폰 수정
 // 쿠폰 수정 API
 const editCoupon = async (req, res) => {
     const { couponID } = req.params; // 요청 경로에서 couponID 가져옴
-    const { name, discountAmount, startDate, expiry } = req.body; // 요청 본문에서 수정할 내용 가져옴
+    const { name, discountAmount, startDate, expiry, status } = req.body; // 요청 본문에서 수정할 내용 가져옴
 
     try {
         // 쿠폰ID로 해당 쿠폰 찾기
@@ -536,6 +568,7 @@ const editCoupon = async (req, res) => {
         coupon.DiscountAmount = discountAmount;
         coupon.StartDate = new Date(startDate);
         coupon.ExpirationDate = new Date(expiry);
+        coupon.Status = status; // 상태 업데이트
 
         await coupon.save(); // 수정된 쿠폰 정보 저장
 
@@ -545,6 +578,7 @@ const editCoupon = async (req, res) => {
         res.status(500).json({ message: '쿠폰 수정 실패', error: error.message });
     }
 };
+
 
 // 발급된 쿠폰 조회
 const getIssuedCoupons = async (req, res) => {

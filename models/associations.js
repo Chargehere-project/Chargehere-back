@@ -15,18 +15,21 @@ const applyAssociations = (db) => {
         Banner,
         Notice,
         Reviews,
+        QnA,
+        QnAReplies,
     } = db;
 
-    // 사용자와 문의(1:N)
+    // 사용자와 문의(1:N) - ON DELETE SET NULL 적용
     User.hasMany(Inquiries, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
-        onDelete: 'CASCADE',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
     });
 
     Inquiries.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
     });
 
     // 문의와 문의 답변(1:N)
@@ -39,6 +42,31 @@ const applyAssociations = (db) => {
     InquiryReplies.belongsTo(Inquiries, {
         foreignKey: 'InquiryID',
         targetKey: 'InquiryID',
+    });
+
+    // 사용자와 QnA(1:N) - ON DELETE SET NULL 적용
+    User.hasMany(QnA, {
+        foreignKey: 'UserID',
+        sourceKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+    });
+
+    QnA.belongsTo(User, {
+        foreignKey: 'UserID',
+        targetKey: 'UserID',
+        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+    });
+
+    // QnA와 QnA 답변(1:N)
+    QnA.hasMany(QnAReplies, {
+        foreignKey: 'QnAID',
+        sourceKey: 'QnAID',
+        onDelete: 'CASCADE',
+    });
+
+    QnAReplies.belongsTo(QnA, {
+        foreignKey: 'QnAID',
+        targetKey: 'QnAID',
     });
 
     // 사용자와 주문 목록(1:N)

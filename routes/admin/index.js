@@ -10,8 +10,8 @@ const {
     replyToInquiry,
     getReply,
     searchInquiries,
-    getPointsHistory, // 포인트 내역 조회 API 추가
-    updatePoints, // 포인트 변경 API 추가
+    getPointsHistory,
+    updatePoints,
     cancelPoints,
     searchPoints,
     createCoupon,
@@ -20,6 +20,7 @@ const {
     editCoupon,
     getIssuedCoupons,
     updateCouponStatus,
+    searchCoupons, // 쿠폰 검색 컨트롤러 추가
 } = require('../../controller/admin'); // 관리자 관련 컨트롤러 가져오기
 
 // 관리자 관련 API 라우터 (유저 관리)
@@ -38,26 +39,18 @@ router.get('/inquiries/search', searchInquiries); // 문의 검색
 // 포인트 관련 API 라우터
 router.get('/points', getPointsHistory); // 포인트 내역 조회
 router.post('/points', updatePoints); // 포인트 추가/차감
-router.post('/points/cancel', cancelPoints);
-// 포인트 검색 라우터 설정
-router.get('/points/search', searchPoints);
-// 쿠폰 생성
-router.post('/coupons', createCoupon);
+router.post('/points/cancel', cancelPoints); // 포인트 취소
+router.get('/points/search', searchPoints); // 포인트 검색
 
-// 쿠폰 발급
-router.post('/coupons/issue', issueCoupon);
+// 쿠폰 관련 API 라우터
+router.post('/coupons', createCoupon); // 쿠폰 생성
+router.post('/coupons/issue', issueCoupon); // 쿠폰 발급
+router.get('/coupons', getCoupons); // 쿠폰 리스트 조회 (페이지네이션)
+router.put('/coupons/:couponID', editCoupon); // 쿠폰 수정
+router.get('/coupons/issued', getIssuedCoupons); // 발급된 쿠폰 리스트 조회 (페이지네이션)
+router.put('/coupons/:id/status', updateCouponStatus); // 쿠폰 상태 업데이트
 
-// 쿠폰 리스트 조회 (페이지네이션)
-router.get('/coupons', getCoupons);
-
-// 쿠폰 수정
-router.put('/coupons/:couponID', editCoupon);
-
-// 발급된 쿠폰 리스트 조회 (페이지네이션)
-router.get('/coupons/issued', getIssuedCoupons);
-
-// 쿠폰 상태 업데이트 라우터
-router.put('/coupons/:id/status', updateCouponStatus);
-
+// 쿠폰 검색 라우터 추가
+router.get('/coupons/search', searchCoupons); // 쿠폰 검색
 
 module.exports = router;

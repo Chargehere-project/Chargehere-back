@@ -19,20 +19,20 @@ const applyAssociations = (db) => {
         QnAReplies,
     } = db;
 
-    // 사용자와 문의(1:N) - ON DELETE SET NULL 적용
+    // 사용자와 문의(1:N) - 사용자 삭제 시 문의의 UserID를 NULL로 설정
     User.hasMany(Inquiries, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
-        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+        onDelete: 'SET NULL',
     });
 
     Inquiries.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
-        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+        onDelete: 'SET NULL',
     });
 
-    // 문의와 문의 답변(1:N)
+    // 문의와 문의 답변(1:N) - 문의가 삭제되면 관련 답변도 삭제
     Inquiries.hasMany(InquiryReplies, {
         foreignKey: 'InquiryID',
         sourceKey: 'InquiryID',
@@ -44,20 +44,20 @@ const applyAssociations = (db) => {
         targetKey: 'InquiryID',
     });
 
-    // 사용자와 QnA(1:N) - ON DELETE SET NULL 적용
+    // 사용자와 QnA(1:N) - 사용자 삭제 시 QnA의 UserID를 NULL로 설정
     User.hasMany(QnA, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
-        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+        onDelete: 'SET NULL',
     });
 
     QnA.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
-        onDelete: 'SET NULL', // 사용자 삭제 시 UserID를 NULL로 설정
+        onDelete: 'SET NULL',
     });
 
-    // QnA와 QnA 답변(1:N)
+    // QnA와 QnA 답변(1:N) - QnA가 삭제되면 관련 답변도 삭제
     QnA.hasMany(QnAReplies, {
         foreignKey: 'QnAID',
         sourceKey: 'QnAID',
@@ -69,7 +69,7 @@ const applyAssociations = (db) => {
         targetKey: 'QnAID',
     });
 
-    // 사용자와 주문 목록(1:N)
+    // 사용자와 주문 목록(1:N) - 사용자가 삭제되면 관련 주문도 삭제
     User.hasMany(OrderList, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -81,7 +81,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    // 주문 목록과 장바구니(1:N)
+    // 주문 목록과 장바구니(1:N) - 주문이 삭제되면 관련 장바구니도 삭제
     OrderList.hasMany(Cart, {
         foreignKey: 'OrderListID',
         sourceKey: 'OrderListID',
@@ -93,7 +93,7 @@ const applyAssociations = (db) => {
         targetKey: 'OrderListID',
     });
 
-    // 상품과 장바구니(1:N)
+    // 상품과 장바구니(1:N) - 상품이 삭제되면 관련 장바구니도 삭제
     Products.hasMany(Cart, {
         foreignKey: 'ProductID',
         sourceKey: 'ProductID',
@@ -105,7 +105,7 @@ const applyAssociations = (db) => {
         targetKey: 'ProductID',
     });
 
-    // 사용자와 트랜잭션(1:N)
+    // 사용자와 트랜잭션(1:N) - 사용자가 삭제되면 관련 트랜잭션도 삭제
     User.hasMany(Transactions, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -117,7 +117,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    // 주문 목록과 트랜잭션(1:1)
+    // 주문 목록과 트랜잭션(1:1) - 주문이 삭제되면 관련 트랜잭션도 삭제
     OrderList.hasOne(Transactions, {
         foreignKey: 'OrderListID',
         sourceKey: 'OrderListID',
@@ -129,7 +129,7 @@ const applyAssociations = (db) => {
         targetKey: 'OrderListID',
     });
 
-    // 사용자와 포인트(1:N)
+    // 사용자와 포인트(1:N) - 사용자가 삭제되면 관련 포인트도 삭제
     User.hasMany(Points, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -142,7 +142,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    // 트랜잭션과 포인트(1:N)
+    // 트랜잭션과 포인트(1:N) - 트랜잭션이 삭제되면 관련 포인트도 삭제
     Transactions.hasMany(Points, {
         foreignKey: 'TransactionID',
         sourceKey: 'TransactionID',
@@ -154,7 +154,7 @@ const applyAssociations = (db) => {
         targetKey: 'TransactionID',
     });
 
-    // 사용자와 쿠폰(1:N)
+    // 사용자와 쿠폰(1:N) - 사용자가 삭제되면 관련 쿠폰 기록도 삭제
     User.hasMany(UserCoupon, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -166,7 +166,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    // 쿠폰과 사용자 쿠폰(1:N)
+    // 쿠폰과 사용자 쿠폰(1:N) - 쿠폰이 삭제되면 관련 사용자 쿠폰도 삭제
     Coupons.hasMany(UserCoupon, {
         foreignKey: 'CouponID',
         sourceKey: 'CouponID',
@@ -178,7 +178,7 @@ const applyAssociations = (db) => {
         targetKey: 'CouponID',
     });
 
-    // 상품과 카테고리(1:N)
+    // 상품과 카테고리(1:N) - 카테고리가 삭제되면 관련 상품도 삭제
     Categories.hasMany(Products, {
         foreignKey: 'CategoryID',
         sourceKey: 'CategoryID',
@@ -190,7 +190,7 @@ const applyAssociations = (db) => {
         targetKey: 'CategoryID',
     });
 
-    // 관리자와 공지사항(1:N)
+    // 관리자와 공지사항(1:N) - 관리자가 삭제되면 관련 공지사항도 삭제
     Admin.hasMany(Notice, {
         foreignKey: 'AdminID',
         sourceKey: 'AdminID',
@@ -202,7 +202,7 @@ const applyAssociations = (db) => {
         targetKey: 'AdminID',
     });
 
-    // 관리자와 배너(1:N)
+    // 관리자와 배너(1:N) - 관리자가 삭제되면 관련 배너도 삭제
     Admin.hasMany(Banner, {
         foreignKey: 'AdminID',
         sourceKey: 'AdminID',
@@ -214,7 +214,7 @@ const applyAssociations = (db) => {
         targetKey: 'AdminID',
     });
 
-    // 사용자와 리뷰(1:N)
+    // 사용자와 리뷰(1:N) - 사용자가 삭제되면 관련 리뷰도 삭제
     User.hasMany(Reviews, {
         foreignKey: 'UserID',
         sourceKey: 'UserID',
@@ -226,7 +226,7 @@ const applyAssociations = (db) => {
         targetKey: 'UserID',
     });
 
-    // 상품과 리뷰(1:N)
+    // 상품과 리뷰(1:N) - 상품이 삭제되면 관련 리뷰도 삭제
     Products.hasMany(Reviews, {
         foreignKey: 'ProductID',
         sourceKey: 'ProductID',

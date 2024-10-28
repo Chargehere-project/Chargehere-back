@@ -1,5 +1,6 @@
 const { User, Notice, Points } = require('../../models');
 const jwt = require('jsonwebtoken')
+const axios = require('axios'); 
 
 const signup = async (req, res) => {
     console.log(req.body, '회원가입');
@@ -106,19 +107,66 @@ const everydayevent = async (req,res) =>{
     }
 }
 
+// controller/front/index.js
+// controller/front/index.js
 const getChargers = async (req, res) => {
     try {
-        const response = await axios.get('http://apis.data.go.kr/B552584/EvCharger/getChargerStatus', {
+        // 충전소 기본 정보 가져오기 (위치 정보 포함)
+        const stationResponse = await axios.get('http://apis.data.go.kr/B552584/EvCharger/getChargerInfo', {
             params: {
                 serviceKey: process.env.SERVICEKEY,
-                ...req.query
+                pageNo: 1,
+                numOfRows: 200,  // 더 많은 데이터 가져오기
+                zcode: req.query.zcode  // 지역 코드 추가
             }
         });
-        res.json(response.data);
+
+        // 충전기 상태 정보 가져오기
+        const statusResponse = await axios.get('http://apis.data.go.kr/B552584/EvCharger/getChargerStatus', {
+            params: {
+                serviceKey: process.env.SERVICEKEY,
+                pageNo: 1,
+                numOfRows: 200,
+                zcode: req.query.zcode
+            }
+        });
+
+
+        const stations = stationResponse.data.items[0].item;
+        const statuses = statusResponse.data.items[0].item;
+
+        // 위치 정보가 있는 충전소 데이터만 필터링하고 상태 정보 병합
+        const mergedData = stations
+            .filter(station => station.lat && station.lng)  // 위치 정보가 있는 것만 필터링
+            .map(station => {
+                const status = statuses.find(s => s.statId === station.statId);
+                return {
+                    ...station,
+                    stat: status?.stat || '9',  // 상태 정보 추가 (없으면 9=상태미확인)
+                    statUpdDt: status?.statUpdDt,
+                    lastTsdt: status?.lastTsdt,
+                    lastTedt: status?.lastTedt,
+                    nowTsdt: status?.nowTsdt,
+                };
+            });
+
+
+        res.json({
+            success: true,
+            data: mergedData,
+            totalCount: mergedData.length
+        });
+
     } catch (error) {
         console.error('충전소 데이터 조회 오류:', error);
-        res.status(500).json({ error: '충전소 데이터 조회 실패' });
+        console.error('Error details:', error.response?.data);
+        res.status(500).json({ 
+            success: false, 
+            error: '충전소 데이터 조회 실패',
+            message: error.message 
+        });
     }
 };
+
 
 module.exports = { signup, login, notice, everydayevent, notices, getChargers };

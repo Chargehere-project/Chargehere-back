@@ -31,6 +31,11 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.TEXT,
                 allowNull: true,
             },
+            Status: {
+                type: DataTypes.ENUM('active', 'inactive', 'deleted'), // 상태 추가
+                allowNull: false,
+                defaultValue: 'active', // 기본값 설정
+            },
         },
         {
             timestamps: true,

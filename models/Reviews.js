@@ -31,6 +31,11 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.STRING(255),
                 allowNull: true,
             },
+            Status: {
+                type: DataTypes.ENUM('visible', 'hidden', 'deleted'), // 상태 추가
+                allowNull: false,
+                defaultValue: 'visible', // 기본값 설정
+            },
         },
         {
             timestamps: true, // createdAt, updatedAt 추가

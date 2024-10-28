@@ -5,35 +5,51 @@ const { Sequelize } = require('sequelize');  // Sequelize 모듈을 가져옵니
 
 // 유저 검색 기능
 const searchUsers = async (req, res) => {
-    const { searchType, searchValue, startDate, endDate, status } = req.query;
+    const { searchType, searchValue, startDate, endDate, status, forCouponIssue } = req.query;
 
     let whereCondition = {};
 
     if (searchType === 'name' && searchValue) {
         whereCondition.Name = { [Op.like]: `%${searchValue}%` };
+        console.log('이름 필터 적용:', whereCondition.Name);
     }
 
     if (searchType === 'id' && searchValue) {
         whereCondition.LoginID = { [Op.like]: `%${searchValue}%` };
+        console.log('아이디 필터 적용:', whereCondition.LoginID);
     }
 
     if (startDate && endDate) {
         whereCondition.JoinDate = {
             [Op.between]: [new Date(startDate), new Date(endDate)],
         };
+        console.log('날짜 필터 적용:', whereCondition.JoinDate);
     }
 
     if (status) {
         whereCondition.Status = status;
+        console.log('상태 필터 적용:', whereCondition.Status);
     }
+
+    if (forCouponIssue) {
+        whereCondition.isCouponEligible = true; // 쿠폰 발급 가능한 유저 필터
+    }
+
+    // 필터 조건 로그 출력
+    console.log('생성된 필터 조건:', whereCondition);
 
     try {
         const users = await User.findAll({ where: whereCondition });
+        console.log('필터 적용 후 검색된 유저들:', users);
         res.json(users);
     } catch (error) {
+        console.error('유저 검색 실패:', error);
         res.status(500).json({ message: '유저 검색 실패' });
     }
 };
+
+
+
 
 // 유저 전체 목록 가져오기 (페이지네이션 추가)
 const getAllUsers = async (req, res) => {
@@ -412,35 +428,22 @@ const searchPoints = async (req, res) => {
 const createCoupon = async (req, res) => {
     const { name, discountAmount, startDate, expiry, status } = req.body;
 
-    // 입력값 확인 로그
-    console.log('쿠폰 생성 요청 받음:', req.body);
-
     try {
-        // 쿠폰 중복 확인
         const existingCoupon = await Coupons.findOne({ where: { CouponName: name } });
-        
         if (existingCoupon) {
-            // 중복 쿠폰 확인 로그
-            console.log('중복된 쿠폰명 발견:', name);
             return res.status(400).json({ message: '중복된 쿠폰명이 있습니다.' });
         }
 
-        // 새로운 쿠폰 생성
         const newCoupon = await Coupons.create({
             CouponName: name,
             DiscountAmount: discountAmount,
             StartDate: new Date(startDate),
             ExpirationDate: new Date(expiry),
-            Status: status // status 필드 추가
+            Status: status
         });
-
-        // 성공 로그
-        console.log('새로운 쿠폰 생성 성공:', newCoupon);
 
         res.json({ message: '쿠폰이 성공적으로 생성되었습니다.', coupon: newCoupon });
     } catch (error) {
-        // 에러 로그
-        console.error('쿠폰 생성 중 에러 발생:', error);
         res.status(500).json({ message: '쿠폰 생성 실패', error });
     }
 };
@@ -448,33 +451,72 @@ const createCoupon = async (req, res) => {
 
 
 
+
 // 사용자에게 쿠폰 발급 또는 사용 시 유효기간 확인 로직 추가
+// const issueCoupon = async (req, res) => {
+//     const { userID, couponID } = req.body;
+
+//     try {
+//         // 쿠폰 정보를 조회
+//         const coupon = await Coupons.findByPk(couponID);
+//         if (!coupon) {
+//             return res.status(404).json({ message: '해당 쿠폰을 찾을 수 없습니다.' });
+//         }
+
+//         // 현재 날짜와 쿠폰 유효기간 비교
+//         const now = new Date();
+//         const expirationDate = new Date(coupon.ExpirationDate);
+
+//         // 쿠폰이 만료된 경우
+//         if (now > expirationDate) {
+//             return res.status(400).json({ message: '이 쿠폰은 유효기간이 만료되었습니다.' });
+//         }
+
+//         // 유저 조회
+//         const user = await User.findByPk(userID);
+//         if (!user) {
+//             return res.status(404).json({ message: '해당 유저를 찾을 수 없습니다.' });
+//         }
+
+//         // 쿠폰 발급 처리
+//         const issuedCoupon = await UserCoupon.create({
+//             UserID: userID,
+//             CouponID: couponID,
+//             IssuedAt: now,
+//             IsUsed: false,
+//         });
+
+//         res.json({ message: '쿠폰이 성공적으로 발급되었습니다.', userCoupon: issuedCoupon });
+//     } catch (error) {
+//         res.status(500).json({ message: '쿠폰 발급 실패', error });
+//     }
+// };
+
 const issueCoupon = async (req, res) => {
     const { userID, couponID } = req.body;
 
+    if (!userID || !couponID) {
+        return res.status(400).json({ message: '유저 ID와 쿠폰 ID가 필요합니다.' });
+    }
+
     try {
-        // 쿠폰 정보를 조회
         const coupon = await Coupons.findByPk(couponID);
         if (!coupon) {
             return res.status(404).json({ message: '해당 쿠폰을 찾을 수 없습니다.' });
         }
 
-        // 현재 날짜와 쿠폰 유효기간 비교
         const now = new Date();
         const expirationDate = new Date(coupon.ExpirationDate);
 
-        // 쿠폰이 만료된 경우
         if (now > expirationDate) {
             return res.status(400).json({ message: '이 쿠폰은 유효기간이 만료되었습니다.' });
         }
 
-        // 유저 조회
         const user = await User.findByPk(userID);
         if (!user) {
             return res.status(404).json({ message: '해당 유저를 찾을 수 없습니다.' });
         }
 
-        // 쿠폰 발급 처리
         const issuedCoupon = await UserCoupon.create({
             UserID: userID,
             CouponID: couponID,
@@ -484,9 +526,11 @@ const issueCoupon = async (req, res) => {
 
         res.json({ message: '쿠폰이 성공적으로 발급되었습니다.', userCoupon: issuedCoupon });
     } catch (error) {
+        console.error('쿠폰 발급 실패:', error);
         res.status(500).json({ message: '쿠폰 발급 실패', error });
     }
 };
+
 
 
 // 쿠폰 리스트 조회
@@ -639,6 +683,61 @@ const updateCouponStatus = async (req, res) => {
     }
 };
 
+// 쿠폰 검색 기능
+// 쿠폰 검색 기능 컨트롤러
+const searchCoupons = async (req, res) => {
+    console.log('searchCoupons function has been called.'); // 함수 호출 여부 확인
+    const { couponId, startDate, endDate, searchBy, searchQuery } = req.query;
+
+    let whereCondition = {};
+
+    // 쿠폰 ID로 검색 (문자열을 숫자로 변환)
+    if (couponId) {
+        whereCondition.CouponID = parseInt(couponId, 10);
+        console.log('쿠폰 ID 필터 적용:', whereCondition.CouponID);
+    }
+
+    // 기간 필터링
+    if (startDate && endDate) {
+        whereCondition.IssuedAt = {
+            [Op.between]: [new Date(startDate), new Date(endDate)],
+        };
+        console.log('기간 필터 적용:', whereCondition.IssuedAt);
+    }
+
+    // 검색 기준에 따른 필터링 (유저 ID 또는 이름)
+    if (searchBy === 'userId' && searchQuery) {
+        whereCondition['$User.LoginID$'] = { [Op.like]: `%${searchQuery}%` };
+        console.log('유저 ID 필터 적용:', whereCondition['$User.LoginID$']);
+    } else if (searchBy === 'userName' && searchQuery) {
+        whereCondition['$User.Name$'] = { [Op.like]: `%${searchQuery}%` };
+        console.log('유저 이름 필터 적용:', whereCondition['$User.Name$']);
+    }
+
+    // 전체 whereCondition 확인
+    console.log('최종 검색 조건:', whereCondition);
+
+    try {
+        const coupons = await UserCoupon.findAll({
+            where: whereCondition,
+            include: [
+                { model: Coupons, attributes: ['CouponName'] },
+                { model: User, attributes: ['LoginID', 'Name'] },
+            ],
+            order: [['IssuedAt', 'DESC']],
+        });
+
+        console.log('필터 적용 후 검색된 쿠폰 목록:', coupons);
+        res.json(coupons);
+    } catch (error) {
+        console.error('쿠폰 검색 실패:', error);
+        res.status(500).json({ message: '쿠폰 검색 실패' });
+    }
+};
+
+
+
+
 
 
 
@@ -662,4 +761,5 @@ module.exports = {
     editCoupon,
     getIssuedCoupons,
     updateCouponStatus,
+    searchCoupons,
 };

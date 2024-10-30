@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, login, notice,everydayevent, notices, getChargers } = require('../../controller/front');
+const { signup, login, notice,everydayevent, notices, getChargers, name, chargelist, couponlist, products } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
 
@@ -12,6 +12,11 @@ router.get('/notice', notice);
 router.get('/notices', notices)
 router.post('/everydayevent',auth, everydayevent)
 router.get('/chargers', getChargers)
+router.post('/name',auth, name)
+router.post('/chargelist', auth, chargelist)
+router.post('/couponlist', auth, couponlist)
+router.get('/products', products)
+
 
 
 module.exports = router;

@@ -1,6 +1,7 @@
-const { User, Notice, Points } = require('../../models');
-const jwt = require('jsonwebtoken')
-const axios = require('axios'); 
+const { User, Notice, Points, UserCoupon, Products } = require('../../models');
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const { where } = require('sequelize');
 
 const signup = async (req, res) => {
     console.log(req.body, '회원가입');
@@ -20,7 +21,7 @@ const login = async (req, res) => {
     try {
         console.log(req.body, '로그인');
         const { id, password } = req.body;
-        const find = await User.findOne({ where: { LoginID:id } });
+        const find = await User.findOne({ where: { LoginID: id } });
         if (find) {
             if (find.Password === password) {
                 //jwt토큰 발생
@@ -29,7 +30,9 @@ const login = async (req, res) => {
                  * algorithm: 서명 알고리즘 지정
                  * issuer: 토큰발급자 지정
                  */
-                const token = jwt.sign({ UserID: find.UserID, LoginID: find.LoginID }, process.env.SECRET, { expiresIn: '24h' });
+                const token = jwt.sign({ UserID: find.UserID, LoginID: find.LoginID }, process.env.SECRET, {
+                    expiresIn: '24h',
+                });
                 console.log(process.env.SECRET);
                 const response = {
                     // id: find.id,
@@ -65,26 +68,23 @@ const notice = async (req, res) => {
         res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
     }
 };
-const notices = async (req,res) => {
-    try{
+const notices = async (req, res) => {
+    try {
         const result = await Notice.findAll({
             order: [['NoticeID', 'DESC']],
-            attributes: ['NoticeID', 'Title', 'PostDate']
-        })
-        res.json({result})
-    }
-    catch(error){
+            attributes: ['NoticeID', 'Title', 'PostDate'],
+        });
+        res.json({ result });
+    } catch (error) {
         console.error('공지사항 조회 오류', error);
-        res.status(500).json({result: false, message:'공지사항 조회 오류'})
-        
+        res.status(500).json({ result: false, message: '공지사항 조회 오류' });
     }
-}
-
-const everydayevent = async (req,res) =>{
-    try{
+};
+const everydayevent = async (req, res) => {
+    try {
         console.log(req.body, '출석이벤트');
-        const { points,reward } = req.body;
-        const userId = req.user.UserID;  // 미들웨어에서 설정한 user 정보 사용
+        const { points, reward } = req.body;
+        const userId = req.user.UserID; // 미들웨어에서 설정한 user 정보 사용
         const user = await User.findByPk(userId);
 
         const result = await Points.create({
@@ -94,18 +94,16 @@ const everydayevent = async (req,res) =>{
             ChargeType: 'Earned',
             Amount: points,
             Description: '출석이벤트',
-        })
+        });
 
-        user.Points += points
+        user.Points += points;
         await user.save();
-        res.json({result:true,message:'포인트 지급 성공'})
-
+        res.json({ result: true, message: '포인트 지급 성공' });
+    } catch (error) {
+        console.error('포인트 지급 오류', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
     }
-    catch (error) {
-        console.error('포인트 지급 오류',error)
-        res.status(500).json({result:false, message:'서버 오류'})
-    }
-}
+};
 
 // controller/front/index.js
 // controller/front/index.js
@@ -116,9 +114,9 @@ const getChargers = async (req, res) => {
             params: {
                 serviceKey: process.env.SERVICEKEY,
                 pageNo: 1,
-                numOfRows: 200,  // 더 많은 데이터 가져오기
-                zcode: req.query.zcode  // 지역 코드 추가
-            }
+                numOfRows: 200, // 더 많은 데이터 가져오기
+                zcode: req.query.zcode, // 지역 코드 추가
+            },
         });
 
         // 충전기 상태 정보 가져오기
@@ -127,22 +125,21 @@ const getChargers = async (req, res) => {
                 serviceKey: process.env.SERVICEKEY,
                 pageNo: 1,
                 numOfRows: 200,
-                zcode: req.query.zcode
-            }
+                zcode: req.query.zcode,
+            },
         });
-
 
         const stations = stationResponse.data.items[0].item;
         const statuses = statusResponse.data.items[0].item;
 
         // 위치 정보가 있는 충전소 데이터만 필터링하고 상태 정보 병합
         const mergedData = stations
-            .filter(station => station.lat && station.lng)  // 위치 정보가 있는 것만 필터링
-            .map(station => {
-                const status = statuses.find(s => s.statId === station.statId);
+            .filter((station) => station.lat && station.lng) // 위치 정보가 있는 것만 필터링
+            .map((station) => {
+                const status = statuses.find((s) => s.statId === station.statId);
                 return {
                     ...station,
-                    stat: status?.stat || '9',  // 상태 정보 추가 (없으면 9=상태미확인)
+                    stat: status?.stat || '9', // 상태 정보 추가 (없으면 9=상태미확인)
                     statUpdDt: status?.statUpdDt,
                     lastTsdt: status?.lastTsdt,
                     lastTedt: status?.lastTedt,
@@ -150,23 +147,75 @@ const getChargers = async (req, res) => {
                 };
             });
 
-
         res.json({
             success: true,
             data: mergedData,
-            totalCount: mergedData.length
+            totalCount: mergedData.length,
         });
-
     } catch (error) {
         console.error('충전소 데이터 조회 오류:', error);
         console.error('Error details:', error.response?.data);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             error: '충전소 데이터 조회 실패',
-            message: error.message 
+            message: error.message,
         });
     }
 };
 
+const name = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const find = await User.findOne({ where: { UserID: userId } });
+        res.json({ result: true, name: find.Name, point: find.Points });
+    } catch (error) {
+        console.error('이름과 포인트 조회 오류', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+const chargelist = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        console.log(req.body, '충전내역');
+        const find = await Points.findAll({ where: { UserID: userId }, order: [['ChargeDate', 'DESC']], limit: 5 });
+        res.json({ result: true, data: find });
+    } catch (error) {
+        console.error('충전내역 오류', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
 
-module.exports = { signup, login, notice, everydayevent, notices, getChargers };
+const couponlist = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        console.log(req.body, '충전내역');
+        const find = await UserCoupon.findAll({
+            where: { UserID: userId },
+            include: [
+                {
+                    model: Coupons,
+                    attributes: ['CouponName', 'StartDate', 'ExpirationDate'],
+                },
+            ],
+        });
+        res.json({ result: true, data: find });
+    } catch (error) {
+        console.error('충전내역 오류', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+
+const products = async (req, res) => {
+    try {
+        const find = await Products.findAll({
+            attributes: ['ProductID', 'ProductName', 'Price', 'Discount', 'Image'],
+        });
+
+        res.json({ result: true, data: find });
+    } catch (error) {
+        console.error('상품오류', error);
+        res.status(500).json({ result: false, message: '서버오류' });
+    }
+};
+
+module.exports = { signup, login, notice, everydayevent, notices, getChargers, name, chargelist, couponlist, products };

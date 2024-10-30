@@ -9,7 +9,11 @@ module.exports = (sequelize, DataTypes) => {
             },
             QnAID: {
                 type: DataTypes.INTEGER,
-                allowNull: false, // QnA에 반드시 연결되어 있어야 함
+                allowNull: false,
+            },
+            ProductID: {
+                type: DataTypes.INTEGER,
+                allowNull: false, // ProductID는 반드시 필요
             },
             ReplyContent: {
                 type: DataTypes.TEXT,

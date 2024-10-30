@@ -9,7 +9,7 @@ module.exports = (seq, DataTypes) => {
             },
             CategoryID: {
                 type: DataTypes.INTEGER,
-                allowNull: false,
+                allowNull: true,
             },
             ProductName: {
                 type: DataTypes.STRING(255),

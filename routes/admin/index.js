@@ -1,4 +1,7 @@
 const express = require('express');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 const {
     searchUsers,
@@ -20,8 +23,48 @@ const {
     editCoupon,
     getIssuedCoupons,
     updateCouponStatus,
-    searchCoupons, // 쿠폰 검색 컨트롤러 추가
+    searchCoupons,
+    getProducts, // 상품 목록 조회
+    createProduct, // 상품 등록
+    editProduct, // 상품 수정
+    deleteProduct, // 상품 삭제
+    updateProductStatus, // 상품 상태 변경
+    deleteProductImage,
+    searchProducts,
+    getReviews,
+    editReview,
+    deleteReview,
+    updateReviewStatus,
+    deleteReviewImage,
+    searchReviews,
+    getQnAs,
+    getQnAReply,
+    replyToQnA,
+    searchQnAs,
 } = require('../../controller/admin'); // 관리자 관련 컨트롤러 가져오기
+
+// 업로드 폴더 설정
+const uploadsDir = path.join(__dirname, '../../uploads'); 
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// multer 설정
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir); // 파일을 uploads 폴더에 저장
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    },
+});
+
+
+
+
+const upload = multer({ storage: storage });
+
 
 // 관리자 관련 API 라우터 (유저 관리)
 router.get('/users/search', searchUsers); // 유저 검색
@@ -52,5 +95,35 @@ router.put('/coupons/:id/status', updateCouponStatus); // 쿠폰 상태 업데�
 
 // 쿠폰 검색 라우터 추가
 router.get('/coupons/search', searchCoupons); // 쿠폰 검색
+
+// 상품 관련 API 라우터
+router.get('/products', getProducts); // 상품 목록 조회 (페이지네이션)
+router.post('/products', upload.single('thumbnail'), createProduct); // 상품 등록
+router.put('/products/:productId', upload.single('thumbnail'), editProduct);
+router.delete('/products/:productId', deleteProduct); // 상품 삭제
+router.put('/products/:productId/status', updateProductStatus); // 상품 상태 변경
+router.delete('/products/:productId/thumbnail', deleteProductImage);
+router.get('/products/search', searchProducts);
+
+
+router.get('/reviews/', getReviews);
+router.put('/reviews/:reviewId', upload.single('image'), editReview); // 'image' 필드로 설정
+router.delete('/reviews/:reviewId', deleteReview); // 리뷰 삭제
+router.put('/reviews/:reviewId/status', updateReviewStatus); // 상품 상태 변경
+router.delete('/reviews/:reviewId/image', deleteReviewImage);
+router.get('/reviews/search', searchReviews);
+
+// QnA 목록 가져오기 - 페이지네이션 포함
+router.get('/qnas', getQnAs);
+
+// 특정 QnA의 답변 가져오기
+router.get('/qnas/:qnaId/replies', getQnAReply);
+
+// QnA 답변 추가 또는 수정
+router.post('/qnas/:qnaId/replies', replyToQnA);
+
+// QnA 검색
+router.get('/qnas/search', searchQnAs);
+
 
 module.exports = router;

@@ -1,26 +1,26 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'OrderList', // 모델 이름을 OrderList로 변경
+        'OrderList', // 모델 이름을 OrderList로 설정
         {
             OrderListID: {
                 type: DataTypes.INTEGER,
                 autoIncrement: true,
                 primaryKey: true,
             },
-            TransactionID: {
-                type: DataTypes.INTEGER,
-                allowNull: false,
-            },
             UserID: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
-            TotalAmount: {
+            ProductID: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+            },
+            Amount: {
                 type: DataTypes.DECIMAL(10, 2),
                 allowNull: false,
             },
             OrderDate: {
-                type: DataTypes.DATEONLY,
+                type: DataTypes.DATE,
                 allowNull: false,
             },
             OrderStatus: {
@@ -28,9 +28,21 @@ module.exports = (seq, DataTypes) => {
                 allowNull: false,
                 defaultValue: 'Pending',
             },
+            CustomerName: {
+                type: DataTypes.STRING(50),
+                allowNull: false,
+            },
+            CustomerPhoneNumber: {
+                type: DataTypes.STRING(20),
+                allowNull: false,
+            },
+            CustomerAddress: {
+                type: DataTypes.STRING(255),
+                allowNull: false,
+            },
         },
         {
-            timestamps: true, // 타임스탬프 유지
+            timestamps: true, // createdAt, updatedAt 필드 자동 추가
             tableName: 'OrderList', // 테이블 이름을 'OrderList'로 설정
         }
     );

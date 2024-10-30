@@ -7,16 +7,20 @@ module.exports = (sequelize, DataTypes) => {
                 autoIncrement: true,
                 primaryKey: true,
             },
+            ProductID: {
+                type: DataTypes.INTEGER,
+                allowNull: false, // ProductID는 반드시 필요
+            },
             UserID: {
                 type: DataTypes.INTEGER,
-                allowNull: true, // UserID는 null 가능
+                allowNull: true,
             },
             Title: {
                 type: DataTypes.STRING(255),
                 allowNull: true,
             },
             Status: {
-                type: DataTypes.ENUM('Pending', 'Answered', 'Closed'),
+                type: DataTypes.ENUM('Pending', 'Answered'),
                 allowNull: false,
                 defaultValue: 'Pending',
             },

@@ -17,7 +17,59 @@ const applyAssociations = (db) => {
         Reviews,
         QnA,
         QnAReplies,
+        OrderItem,
     } = db;
+
+    // 사용자와 QnA(1:N) - 사용자 삭제 시 QnA의 UserID를 NULL로 설정
+    User.hasMany(QnA, {
+        foreignKey: 'UserID',
+        sourceKey: 'UserID',
+        onDelete: 'SET NULL',
+    });
+
+    QnA.belongsTo(User, {
+        foreignKey: 'UserID',
+        targetKey: 'UserID',
+        onDelete: 'SET NULL',
+    });
+
+    // 상품과 QnA(1:N) - 상품이 삭제되면 관련 QnA도 삭제
+    Products.hasMany(QnA, {
+        foreignKey: 'ProductID',
+        sourceKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+    QnA.belongsTo(Products, {
+        foreignKey: 'ProductID',
+        targetKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+    // QnA와 QnA 답변(1:N) - QnA가 삭제되면 관련 답변도 삭제
+    QnA.hasMany(QnAReplies, {
+        foreignKey: 'QnAID',
+        sourceKey: 'QnAID',
+        onDelete: 'CASCADE',
+    });
+
+    QnAReplies.belongsTo(QnA, {
+        foreignKey: 'QnAID',
+        targetKey: 'QnAID',
+    });
+
+    // 상품과 QnA 답변(1:N) - 상품이 삭제되면 관련 QnA 답변도 삭제
+    Products.hasMany(QnAReplies, {
+        foreignKey: 'ProductID',
+        sourceKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+    QnAReplies.belongsTo(Products, {
+        foreignKey: 'ProductID',
+        targetKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
 
     // 사용자와 문의(1:N) - 사용자 삭제 시 문의의 UserID를 NULL로 설정
     User.hasMany(Inquiries, {
@@ -44,31 +96,6 @@ const applyAssociations = (db) => {
         targetKey: 'InquiryID',
     });
 
-    // 사용자와 QnA(1:N) - 사용자 삭제 시 QnA의 UserID를 NULL로 설정
-    User.hasMany(QnA, {
-        foreignKey: 'UserID',
-        sourceKey: 'UserID',
-        onDelete: 'SET NULL',
-    });
-
-    QnA.belongsTo(User, {
-        foreignKey: 'UserID',
-        targetKey: 'UserID',
-        onDelete: 'SET NULL',
-    });
-
-    // QnA와 QnA 답변(1:N) - QnA가 삭제되면 관련 답변도 삭제
-    QnA.hasMany(QnAReplies, {
-        foreignKey: 'QnAID',
-        sourceKey: 'QnAID',
-        onDelete: 'CASCADE',
-    });
-
-    QnAReplies.belongsTo(QnA, {
-        foreignKey: 'QnAID',
-        targetKey: 'QnAID',
-    });
-
     // 사용자와 주문 목록(1:N) - 사용자가 삭제되면 관련 주문도 삭제
     User.hasMany(OrderList, {
         foreignKey: 'UserID',
@@ -80,6 +107,33 @@ const applyAssociations = (db) => {
         foreignKey: 'UserID',
         targetKey: 'UserID',
     });
+
+    // 주문 목록과 주문 아이템(1:N) - 주문이 삭제되면 관련 주문 아이템도 삭제
+    OrderList.hasMany(OrderItem, {
+        foreignKey: 'OrderListID',
+        sourceKey: 'OrderListID',
+        onDelete: 'CASCADE',
+    });
+
+    OrderItem.belongsTo(OrderList, {
+        foreignKey: 'OrderListID',
+        targetKey: 'OrderListID',
+    });
+
+    // 상품과 주문 아이템(1:N) - 상품이 삭제되면 관련 주문 아이템도 삭제
+    Products.hasMany(OrderItem, {
+        foreignKey: 'ProductID',
+        sourceKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+    OrderItem.belongsTo(db.Products, {
+        foreignKey: 'ProductID',
+        targetKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+
 
     // 주문 목록과 장바구니(1:N) - 주문이 삭제되면 관련 장바구니도 삭제
     OrderList.hasMany(Cart, {
@@ -129,17 +183,19 @@ const applyAssociations = (db) => {
         targetKey: 'OrderListID',
     });
 
-    // 사용자와 포인트(1:N) - 사용자가 삭제되면 관련 포인트도 삭제
-    User.hasMany(Points, {
-        foreignKey: 'UserID',
-        sourceKey: 'UserID',
-        as: 'UserPoints', // 관계에서 'UserPoints'라는 별칭 사용
-        onDelete: 'CASCADE',
+    // Points 모델에서 User 모델과의 관계 설정
+    Points.belongsTo(User, {
+        foreignKey: 'UserID', // Points 테이블의 UserID를 외래키로 설정
+        targetKey: 'UserID', // User 테이블의 기본 키 UserID를 참조
+        as: 'PointUser', // Alias 설정
     });
 
-    Points.belongsTo(User, {
-        foreignKey: 'UserID',
-        targetKey: 'UserID',
+    // User 모델에서 Points 모델과의 관계 설정
+    User.hasMany(Points, {
+        foreignKey: 'UserID', // Points 모델에서 참조할 외래키
+        sourceKey: 'UserID', // User 테이블의 기본 키 UserID를 참조
+        as: 'UserPoints', // Alias 설정
+        onDelete: 'CASCADE', // User 삭제 시 관련 Points 레코드 삭제
     });
 
     // 트랜잭션과 포인트(1:N) - 트랜잭션이 삭제되면 관련 포인트도 삭제
@@ -154,16 +210,18 @@ const applyAssociations = (db) => {
         targetKey: 'TransactionID',
     });
 
-    // 사용자와 쿠폰(1:N) - 사용자가 삭제되면 관련 쿠폰 기록도 삭제
+    // UserCoupon과 User의 관계에서 LoginID에 접근할 수 있도록 설정
     User.hasMany(UserCoupon, {
-        foreignKey: 'UserID',
+        foreignKey: 'UserID', // UserCoupon의 외래 키는 UserID
         sourceKey: 'UserID',
+        as: 'Coupons', // User와 UserCoupon 간의 관계 alias
         onDelete: 'CASCADE',
     });
 
     UserCoupon.belongsTo(User, {
         foreignKey: 'UserID',
         targetKey: 'UserID',
+        as: 'UserDetail', // UserCoupon에서 User의 LoginID를 참조할 때 사용할 alias
     });
 
     // 쿠폰과 사용자 쿠폰(1:N) - 쿠폰이 삭제되면 관련 사용자 쿠폰도 삭제

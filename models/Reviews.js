@@ -32,13 +32,23 @@ module.exports = (seq, DataTypes) => {
                 allowNull: true,
             },
             Status: {
-                type: DataTypes.ENUM('visible', 'hidden', 'deleted'), // 상태 추가
+                type: DataTypes.ENUM('visible', 'hidden'), // 상태 추가
                 allowNull: false,
                 defaultValue: 'visible', // 기본값 설정
             },
+            createdAt: {
+                type: DataTypes.DATE, // createdAt 필드 추가
+                allowNull: false,
+                defaultValue: DataTypes.NOW, // 기본값을 현재 시간으로 설정
+            },
+            updatedAt: {
+                type: DataTypes.DATE, // updatedAt 필드 추가
+                allowNull: false,
+                defaultValue: DataTypes.NOW, // 기본값을 현재 시간으로 설정
+            },
         },
         {
-            timestamps: true, // createdAt, updatedAt 추가
+            timestamps: true, // createdAt과 updatedAt을 자동으로 생성
             tableName: 'Reviews',
         }
     );

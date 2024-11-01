@@ -1,4 +1,4 @@
-const { User, Inquiries, InquiryReplies, Points, Coupons, UserCoupon, Products, Reviews, QnA, QnAReplies } = require('../../models');
+const { User, Inquiries, InquiryReplies, Points, Coupons, UserCoupon, Products, Reviews, QnA, QnAReplies, Notice } = require('../../models');
 const { Op } = require('sequelize');
 const { Sequelize } = require('sequelize');  // Sequelize 모듈을 가져옵니다.
 const fs = require('fs');
@@ -448,33 +448,52 @@ const searchPoints = async (req, res) => {
     }
 };
 
+// 포인트 총 개수 가져오기
+const getTotalPointsCount = async (req, res) => {
+    try {
+        const count = await Points.count(); // 총 개수 가져오기
+        res.json({ count });
+    } catch (error) {
+        console.error('포인트 총 개수 가져오기 실패:', error);
+        res.status(500).json({ message: '포인트 총 개수 가져오기 실패', error });
+    }
+};
 
+const getTotalUserCouponsCount = async (req, res) => {
+    try {
+        const count = await UserCoupon.count(); // 총 개수 가져오기
+        res.json({ count });
+    } catch (error) {
+        console.error('UserCoupon 총 개수 가져오기 실패:', error);
+        res.status(500).json({ message: 'UserCoupon 총 개수 가져오기 실패', error });
+    }
+};
 
 
 // 새로운 쿠폰 생성
 // 쿠폰 생성 로직
 const createCoupon = async (req, res) => {
-    const { couponId, name, discountAmount, startDate, expiry, status } = req.body;
+    const { name, discountAmount, startDate, expiry, status } = req.body;
+
+    // 입력 유효성 검사
+    if (!name || !discountAmount || !startDate || !expiry || !status) {
+        return res.status(400).json({ message: '모든 필드를 입력해야 합니다.' });
+    }
 
     try {
-        // 쿠폰 ID 중복 확인
-        const existingCouponId = await Coupons.findOne({ where: { CouponID: couponId } });
-        if (existingCouponId) {
-            return res.status(400).json({ message: '중복된 쿠폰 ID가 있습니다.' });
-        }
-
+        // 새로운 쿠폰 생성
         const newCoupon = await Coupons.create({
-            CouponID: couponId,
             CouponName: name,
             DiscountAmount: discountAmount,
-            StartDate: new Date(startDate),
-            ExpirationDate: new Date(expiry),
-            Status: status
+            StartDate: new Date(startDate), // 현재 날짜로 변환
+            ExpirationDate: new Date(expiry), // 종료일로 변환
+            Status: status,
         });
 
-        res.json({ message: '쿠폰이 성공적으로 생성되었습니다.', coupon: newCoupon });
+        res.status(201).json({ message: '쿠폰이 성공적으로 생성되었습니다.', coupon: newCoupon });
     } catch (error) {
-        res.status(500).json({ message: '쿠폰 생성 실패', error });
+        console.error('쿠폰 생성 실패:', error); // 디버깅 용도로 콘솔에 로그 출력
+        res.status(500).json({ message: '쿠폰 생성에 실패했습니다.', error });
     }
 };
 
@@ -566,7 +585,7 @@ const issueCoupon = async (req, res) => {
 
 // 쿠폰 리스트 조회
 const getCoupons = async (req, res) => {
-    const { page = 1, limit = 10, name, status, startDate, endDate } = req.query;
+    const { page = 1, limit = 10, name, status, startDate, endDate, fetchTotalCount } = req.query;
     const offset = (page - 1) * limit;
 
     let whereCondition = {};
@@ -587,13 +606,21 @@ const getCoupons = async (req, res) => {
     }
 
     try {
+        // 총 쿠폰 수 계산 (필요한 경우 fetchTotalCount가 true일 때만 수행)
+        if (fetchTotalCount === 'true') {
+            const totalCount = await Coupons.count({ where: whereCondition });
+            console.log('Total coupon count (initial load):', totalCount); // 디버깅용 콘솔 로그
+            return res.json({ totalItems: totalCount });
+        }
+
+        // 페이지네이션 데이터 반환
         const { count, rows } = await Coupons.findAndCountAll({
             where: whereCondition,
             include: [
                 {
                     model: UserCoupon,
                     attributes: ['IsUsed'],
-                    as: 'UserCoupons', // 설정한 별칭 추가
+                    as: 'UserCoupons',
                 },
             ],
             limit: parseInt(limit),
@@ -601,10 +628,13 @@ const getCoupons = async (req, res) => {
             order: [['createdAt', 'DESC']], // 최신순 정렬
         });
 
+        console.log('Total coupon count (paginated):', count); // 디버깅용 콘솔 로그
+        console.log('Paginated coupon data:', rows); // 반환된 쿠폰 데이터 확인
+
         res.json({
             totalItems: count,
             totalPages: Math.ceil(count / limit),
-            currentPage: page,
+            currentPage: parseInt(page),
             coupons: rows,
         });
     } catch (error) {
@@ -785,12 +815,14 @@ const getProducts = async (req, res) => {
             products: rows, // 현재 페이지의 상품 목록
             totalPages, // 전체 페이지 수
             currentPage: parseInt(page), // 현재 페이지
+            totalCount: count, // 전체 상품 수 추가
         });
     } catch (error) {
         console.error('상품 목록 조회 실패:', error.message);
         res.status(500).json({ message: '상품 목록 조회 실패', error: error.message });
     }
 };
+
 
 // 상품 등록
 const createProduct = async (req, res) => {
@@ -1448,7 +1480,138 @@ const searchQnAs = async (req, res) => {
     }
 };
 
+// 공지사항 목록 조회 (페이지네이션 포함)
+const getNotices = async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
 
+    try {
+        const { count, rows } = await Notice.findAndCountAll({
+            order: [['PostDate', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+        });
+
+        const totalPages = Math.ceil(count / limit);
+
+        res.json({
+            notices: rows,
+            totalPages,
+            currentPage: parseInt(page),
+        });
+    } catch (error) {
+        console.error('공지사항 목록 조회 실패:', error);
+        res.status(500).json({ message: '공지사항 목록 조회 실패' });
+    }
+};
+
+// 공지사항 생성
+const createNotice = async (req, res) => {
+    const { title, content, postDate } = req.body;
+
+    try {
+        const newNotice = await Notice.create({
+            Title: title,
+            Content: content,
+            PostDate: postDate,
+        });
+        res.status(201).json({ message: '공지사항이 성공적으로 생성되었습니다.', notice: newNotice });
+    } catch (error) {
+        console.error('공지사항 생성 실패:', error);
+        res.status(500).json({ message: '공지사항 생성에 실패했습니다.' });
+    }
+};
+
+// 공지사항 수정
+const editNotice = async (req, res) => {
+    const { noticeId } = req.params;
+    const { title, content, postDate } = req.body;
+
+    try {
+        const notice = await Notice.findByPk(noticeId);
+        if (!notice) {
+            return res.status(404).json({ message: '해당 공지사항을 찾을 수 없습니다.' });
+        }
+
+        await notice.update({
+            Title: title,
+            Content: content,
+            PostDate: postDate,
+        });
+
+        res.json({ message: '공지사항이 성공적으로 수정되었습니다.', notice });
+    } catch (error) {
+        console.error('공지사항 수정 실패:', error);
+        res.status(500).json({ message: '공지사항 수정에 실패했습니다.' });
+    }
+};
+
+// 공지사항 삭제
+const deleteNotice = async (req, res) => {
+    const { noticeId } = req.params;
+
+    try {
+        const notice = await Notice.findByPk(noticeId);
+        if (!notice) {
+            return res.status(404).json({ message: '해당 공지사항을 찾을 수 없습니다.' });
+        }
+
+        await notice.destroy();
+        res.json({ message: '공지사항이 성공적으로 삭제되었습니다.' });
+    } catch (error) {
+        console.error('공지사항 삭제 실패:', error);
+        res.status(500).json({ message: '공지사항 삭제에 실패했습니다.' });
+    }
+};
+
+// 공지사항 검색
+const searchNotices = async (req, res) => {
+    const { query, startDate, endDate, page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereCondition = {};
+
+    if (query) {
+        whereCondition.Title = { [Op.like]: `%${query}%` };
+    }
+
+    if (startDate && endDate) {
+        whereCondition.PostDate = {
+            [Op.between]: [new Date(startDate), new Date(endDate)],
+        };
+    }
+
+    try {
+        const { count, rows } = await Notice.findAndCountAll({
+            where: whereCondition,
+            order: [['PostDate', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+        });
+
+        const totalPages = Math.ceil(count / limit);
+
+        res.json({
+            notices: rows,
+            totalPages,
+            currentPage: parseInt(page),
+        });
+    } catch (error) {
+        console.error('공지사항 검색 실패:', error);
+        res.status(500).json({ message: '공지사항 검색에 실패했습니다.' });
+    }
+};
+
+// 공지사항 총 개수 가져오기
+const getTotalNoticesCount = async (req, res) => {
+    try {
+        const count = await Notice.count(); // 총 개수 가져오기
+        res.json({ count });
+    } catch (error) {
+        console.error('공지사항 총 개수 가져오기 실패:', error);
+        res.status(500).json({ message: '공지사항 총 개수 가져오기 실패', error });
+    }
+};
 
 module.exports = {
     searchUsers,
@@ -1488,4 +1651,12 @@ module.exports = {
     getQnAReply,
     replyToQnA,
     searchQnAs,
+    getNotices,
+    createNotice,
+    editNotice,
+    deleteNotice,
+    searchNotices,
+    getTotalNoticesCount,
+    getTotalPointsCount,
+    getTotalUserCouponsCount,
 };

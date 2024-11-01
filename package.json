@@ -18,6 +18,8 @@
 
         "mysql2": "^3.11.3",
 
+        "next-connect": "^1.0.0",
+
         "nodemon": "^3.1.7",
 
         "sequelize": "^6.37.4",

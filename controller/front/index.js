@@ -1,7 +1,8 @@
-const { User, Notice, Points, UserCoupon, Products } = require('../../models');
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews } = require('../../models');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
+const nodemailer = require('nodemailer');
 
 const signup = async (req, res) => {
     console.log(req.body, '회원가입');
@@ -11,61 +12,130 @@ const signup = async (req, res) => {
         Password: password,
         Name: name,
         Address: residence,
-        phone: phone,
+        PhoneNumber: phone,
         Points: 0,
         JoinDate: new Date(),
     });
     res.json({ result: true });
 };
+// controllers/front/index.js의 login 함수 수정
+// controllers/front/index.js
 const login = async (req, res) => {
     try {
-        console.log(req.body, '로그인');
+        console.log('로그인 시도 - 세션 ID:', req.sessionID);
         const { id, password } = req.body;
         const find = await User.findOne({ where: { LoginID: id } });
-        if (find) {
-            if (find.Password === password) {
-                //jwt토큰 발생
-                /**
-                 * expiresIn: 만료시간
-                 * algorithm: 서명 알고리즘 지정
-                 * issuer: 토큰발급자 지정
-                 */
-                const token = jwt.sign({ UserID: find.UserID, LoginID: find.LoginID }, process.env.SECRET, {
-                    expiresIn: '24h',
+
+        if (find && find.Password === password) {
+            // JWT 토큰 생성
+            const token = jwt.sign(
+                {
+                    UserID: find.UserID,
+                    LoginID: find.LoginID,
+                    UserName: find.Name,
+                },
+                process.env.SECRET,
+                { expiresIn: '24h' }
+            );
+
+            // 세션에 데이터 저장
+            req.session.userDetails = {
+                phoneNumber: find.PhoneNumber,
+                address: find.Address,
+            };
+
+            // 세션 저장을 확실히 하기 위해 Promise 사용
+            await new Promise((resolve, reject) => {
+                req.session.save((err) => {
+                    if (err) {
+                        console.error('세션 저장 실패:', err);
+                        reject(err);
+                    } else {
+                        console.log('세션 저장 성공:', {
+                            sessionID: req.sessionID,
+                            session: req.session,
+                            userDetails: req.session.userDetails,
+                        });
+                        resolve();
+                    }
                 });
-                console.log(process.env.SECRET);
-                const response = {
-                    // id: find.id,
-                    // userId: find.userId,
-                    token,
-                };
-                res.json({ result: true, code: 100, response, message: '로그인 성공' });
-            } else {
-                res.json({ result: false, code: 1000, response: null, message: '비밀번호 틀렸습니다.' });
-            }
+            });
+
+            // 응답 보내기 전에 쿠키 설정 확인
+            console.log('응답 보내기 전 쿠키:', res.getHeaders()['set-cookie']);
+
+            res.json({
+                result: true,
+                code: 100,
+                response: { token },
+                message: '로그인 성공',
+            });
         } else {
-            res.json({ result: false, code: 1001, response: null, message: '회원이 아닙니다.' });
+            res.json({
+                result: false,
+                code: find ? 1000 : 1001,
+                message: find ? '비밀번호 틀렸습니다.' : '회원이 아닙니다.',
+            });
         }
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ result: false, message: '서버오류' });
+        console.error('로그인 에러:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
     }
+};
+
+// checkSession 컨트롤러도 수정
+const checkSession = async (req, res) => {
+    console.log('세션 체크 요청 받음');
+    console.log('세션 ID:', req.sessionID);
+    console.log('전체 세션:', req.session);
+
+    if (!req.sessionID) {
+        return res.json({ result: false, message: '세션 ID가 없습니다.' });
+    }
+
+    if (!req.session) {
+        return res.json({ result: false, message: '세션 객체가 없습니다.' });
+    }
+
+    if (!req.session.userDetails) {
+        return res.json({ result: false, message: '세션에 사용자 정보가 없습니다.' });
+    }
+
+    res.json({
+        result: true,
+        userDetails: req.session.userDetails,
+    });
 };
 const notice = async (req, res) => {
     try {
-        const result = await Notice.findOne({
+        const notices = await Notice.findAll({
             order: [['NoticeID', 'DESC']],
             attributes: ['Title'],
+            limit: 3,
         });
 
-        if (!result) {
-            return res.status(404).json({ result: false, message: '공지사항이 없습니다.' });
+        console.log('notices 원본:', notices); // 원본 데이터 확인
+
+        if (notices.length === 0) {
+            return res.status(404).json({
+                result: false,
+                message: '공지사항이 없습니다.',
+            });
         }
 
-        res.json({ result: true, data: result.Title });
+        const titles = notices.map((notice) => notice.Title);
+        console.log('가공된 titles:', titles); // 가공된 데이터 확인
+
+        res.json({
+            result: true,
+            data: titles,
+        });
     } catch (error) {
         console.error('공지사항 조회 중 오류 발생:', error);
-        res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
+        res.status(500).json({
+            result: false,
+            message: '서버 오류가 발생했습니다.',
+        });
     }
 };
 const notices = async (req, res) => {
@@ -74,10 +144,15 @@ const notices = async (req, res) => {
             order: [['NoticeID', 'DESC']],
             attributes: ['NoticeID', 'Title', 'PostDate'],
         });
-        res.json({ result });
+
+        // 방법 1: data 키로 보내기
+        res.json({ result: true, data: result });
     } catch (error) {
         console.error('공지사항 조회 오류', error);
-        res.status(500).json({ result: false, message: '공지사항 조회 오류' });
+        res.status(500).json({
+            result: false,
+            message: '공지사항 조회 오류',
+        });
     }
 };
 const everydayevent = async (req, res) => {
@@ -218,4 +293,326 @@ const products = async (req, res) => {
     }
 };
 
-module.exports = { signup, login, notice, everydayevent, notices, getChargers, name, chargelist, couponlist, products };
+const orderlist = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const orders = await OrderList.findAll({
+            where: { UserID: userId },
+            include: [
+                {
+                    model: Product,
+                    attributes: ['ProductID', 'ProductName'],
+                },
+                {
+                    model: Review,
+                    attributes: ['ReviewID'],
+                    required: false,
+                },
+            ],
+        });
+
+        // hasReview 필드 추가
+        const ordersWithReviewStatus = orders.map((order) => ({
+            ...order.toJSON(),
+            hasReview: !!order.Review, // Review가 존재하면 true, 없으면 false
+        }));
+
+        res.json({
+            result: true,
+            data: ordersWithReviewStatus,
+        });
+    } catch (error) {
+        console.error('주문 목록 조회 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '주문 목록 조회 실패',
+        });
+    }
+};
+const cart = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const find = await Cart.findAll({
+            where: { UserID: userId },
+            include: [
+                {
+                    model: Products,
+                    attributes: ['ProductName'],
+                },
+            ],
+        });
+        res.json({ result: true, data: find });
+    } catch (error) {
+        console.error('장바구니 서버 오류', error);
+        res.status(500).json({ result: false, message: '서버오류' });
+    }
+};
+const quantity = async (req, res) => {
+    try {
+        const { cartId, quantity } = req.body;
+
+        await Cart.update({ Quantity: quantity }, { where: { CartID: cartId } });
+
+        res.json({ result: true, message: '수량이 업데이트되었습니다.' });
+    } catch (error) {
+        console.error('장바구니 수량 업데이트 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+const deletecart = async (req, res) => {
+    try {
+        const { cartId } = req.body;
+
+        await Cart.destroy({
+            where: { CartID: cartId },
+        });
+
+        res.json({ result: true, message: '상품이 삭제되었습니다.' });
+    } catch (error) {
+        console.error('장바구니 상품 삭제 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+
+// 서버 측 코드
+const prepareOrder = async (req, res) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const { userId, cartItems, name, phone, address } = req.body;
+
+        // OrderList 테이블에 저장
+        const orderList = await OrderList.create(
+            {
+                UserID: userId,
+                OrderDate: new Date(),
+                OrderStatus: 'Pending',
+                CustomerName: name,
+                CustomerPhoneNumber: phone,
+                CustomerAddress: address,
+            },
+            { transaction: t }
+        );
+
+        // OrderItem 테이블에 각 상품 정보 저장
+        await Promise.all(
+            cartItems.map((item) =>
+                OrderItem.create(
+                    {
+                        OrderListID: orderList.OrderListID,
+                        ProductID: item.ProductID,
+                        Quantity: item.Quantity,
+                        Price: item.Price,
+                        Subtotal: item.Price * item.Quantity,
+                    },
+                    { transaction: t }
+                )
+            )
+        );
+
+        await t.commit();
+
+        res.json({
+            result: true,
+            orderListId: orderList.OrderListID,
+        });
+    } catch (error) {
+        await t.rollback();
+        console.error('주문 준비 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '주문 준비 중 오류가 발생했습니다.',
+        });
+    }
+};
+const findid = async (req, res) => {
+    try {
+        const { name, phone } = req.body;
+        console.log(req.body, '아이디찾기');
+
+        const find = await User.findOne({ where: { Name: name } });
+        if (find) {
+            if (find.PhoneNumber === phone) {
+                res.json({ result: true, code: 100, data: find, message: '아이디 찾기 성공' });
+            } else {
+                res.json({ result: false, code: 1000, response: null, message: '핸드폰 번호가 틀렸습니다.' });
+            }
+        } else {
+            res.json({ result: false, code: 1001, response: null, message: '회원이 아닙니다.' });
+        }
+    } catch (error) {
+        console.error('아이디찾기 오류', error);
+        res.status(500).json({
+            result: false,
+            message: '서버오류',
+        });
+    }
+};
+const checkid = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        console.log(req.body, '아이디중복검사');
+
+        // ID가 비어있는 경우 체크
+        if (!userId) {
+            return res.status(400).json({
+                result: false,
+                code: 400,
+                message: '아이디를 입력해주세요',
+            });
+        }
+
+        const find = await User.findOne({ where: { LoginID: userId } });
+
+        if (!find) {
+            return res.json({
+                result: true,
+                code: 200,
+                message: '사용가능한 아이디입니다',
+            });
+        } else {
+            return res.status(409).json({
+                result: false,
+                code: 409,
+                message: '이미 존재하는 아이디입니다',
+            });
+        }
+    } catch (error) {
+        console.error('중복검사오류', error);
+        return res.status(500).json({
+            // return 추가
+            result: false,
+            code: 500, // 코드 추가
+            message: '서버 오류가 발생했습니다',
+        });
+    }
+};
+
+const findpw = async (req, res) => {
+    try {
+        const { email } = req.body;
+        // console.log(process.env);
+        const { email_service, GMAIL, GPASS } = process.env;
+        const transporter = nodemailer.createTransport({
+            service: email_service,
+            auth: {
+                user: GMAIL,
+                pass: GPASS,
+            },
+        });
+        const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const emailHtml =
+            `<p>안녕하세요.</p>
+          <p>해당 메일은 ` +
+            email +
+            `님의 비밀번호 확인 메일입니다.</p>
+          <p>비밀번호는 <strong>[` +
+            code +
+            `]</strong> 입니다.</p>
+          <p>추후 비밀번호를 꼭 변경해주시기 바랍니다.</p>`;
+        const mailOptions = {
+            from: GMAIL,
+            to: email,
+            subject: '차지히얼 비밀번호 확인 이메일이 도착하였습니다.',
+            html: emailHtml,
+        };
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.log(error);
+                res.json({ result: false, info });
+            } else {
+                console.log('Email Sent', info);
+                res.json({ result: true, code });
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ result: false, message: '서버오류' });
+    }
+};
+const reviewwrite = async (req, res) => {
+    try {
+        const { userId, productId, rating, content, orderId } = req.body;
+        console.log(req.body, '리뷰쓰기');
+
+        const find = await Reviews.create({
+            UserID: userId,
+            ProductID: productId,
+            Rating: rating,
+            Content: content,
+            ReviewDate: new Date(),
+        });
+        res.json({ result: true, message: '리뷰작성완료' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ result: false, message: '서버오류' });
+    }
+};
+const productinfo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const product = await Products.findOne({
+            where: { ProductID: id },
+            attributes: ['ProductID', 'ProductName', 'Price', 'Discount', 'Image', 'DetailInfo'],
+        });
+
+        if (!product) {
+            return res.status(404).json({
+                result: false,
+                message: '제품을 찾을 수 없습니다.',
+            });
+        }
+
+        res.json({
+            result: true,
+            data: product,
+        });
+    } catch (error) {
+        console.error('제품 상세 조회 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '서버 오류',
+        });
+    }
+};
+const buy = async (req, res) => {
+    try {
+        console.log(req.body)
+        const {UserID, ProductID, Amount, CustomerName, CustomerPhoneNumber, CustomerAddress, Quantity} = req.body
+        const result = await OrderList.create({
+            UserID, ProductID, Amount, CustomerName, CustomerPhoneNumber, CustomerAddress, 
+            OrderDate: new Date(),
+        })
+        res.json({ result: true, message: '리뷰작성완료' })
+    } catch (error) {
+        console.error('제품 상세 조회 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '서버 오류',
+        });
+    }
+};
+
+module.exports = {
+    signup,
+    login,
+    notice,
+    everydayevent,
+    notices,
+    getChargers,
+    name,
+    chargelist,
+    couponlist,
+    products,
+    orderlist,
+    cart,
+    quantity,
+    deletecart,
+    prepareOrder,
+    findid,
+    checkid,
+    reviewwrite,
+    productinfo,
+    checkSession,
+    buy
+};

@@ -33,16 +33,9 @@ const applyAssociations = require('./associations');
 // 관계 설정 적용
 applyAssociations(db);
 
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// 데이터베이스 연결 상태 확인
-db.sequelize.authenticate()
-    .then(() => {
-        console.log('Connection has been established successfully.');
-    })
-    .catch(err => {
-        console.error('Unable to connect to the database:', err);
-    });
 
 module.exports = db;

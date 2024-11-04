@@ -2,6 +2,7 @@ const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews } =
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
+const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
 
 const signup = async (req, res) => {
@@ -583,7 +584,7 @@ const buy = async (req, res) => {
             UserID, ProductID, Amount, CustomerName, CustomerPhoneNumber, CustomerAddress, 
             OrderDate: new Date(),
         })
-        res.json({ result: true, message: '리뷰작성완료' })
+        res.json({ result: true, message: '리뷰작성완료', data: result.OrderListID })
     } catch (error) {
         console.error('제품 상세 조회 오류:', error);
         res.status(500).json({
@@ -592,7 +593,235 @@ const buy = async (req, res) => {
         });
     }
 };
+const order = async (req, res) => {
+    try {
+        const id = req.params.id;
+        
+        const orderData = await OrderList.findOne({
+            where: { OrderListID: id },
+            include: [{
+                model: Products,
+                attributes: ['ProductID', 'ProductName', 'Price', 'Image']
+            }]
+        });
 
+        if (!orderData) {
+            return res.status(404).json({
+                result: false,
+                message: '주문을 찾을 수 없습니다.'
+            });
+        }
+
+        console.log('orderData:', JSON.stringify(orderData, null, 2));  // 데이터 확인용
+
+        // null check 추가
+        if (!orderData.Product) {
+            return res.status(404).json({
+                result: false,
+                message: '주문에 해당하는 상품 정보를 찾을 수 없습니다.'
+            });
+        }
+
+        // 프론트엔드 인터페이스에 맞게 데이터 구조화
+        const formattedOrder = {
+            orderListId: orderData.OrderListID,
+            items: [{
+                productID: orderData.Product.ProductID,        // Product로 수정
+                productName: orderData.Product.ProductName,    // Product로 수정
+                quantity: 1,  // 또는 orderData의 quantity 필드
+                price: orderData.Product.Price,               // Product로 수정
+                image: orderData.Product.Image                // Product로 수정
+            }],
+            totalAmount: orderData.Amount,
+            discount: 0,
+            paymentAmount: orderData.Amount
+        };
+
+        res.json({
+            result: true,
+            data: formattedOrder
+        });
+
+    } catch (error) {
+        console.error('주문 조회 중 오류:', error);
+        console.error(error.stack);  // 스택 트레이스 추가
+        res.status(500).json({
+            result: false,
+            message: '주문 조회 중 오류가 발생했습니다.'
+        });
+    }
+};
+const point = async(req,res) => {
+    try {
+        const { userId } = req.body;  // userId를 구조분해할당으로 받아옴
+        console.log('요청받은 userId:', userId);
+
+        if (!userId) {
+            return res.status(400).json({
+                result: false,
+                message: 'userId가 필요합니다.'
+            });
+        }
+
+        const find = await User.findOne({ 
+            where: { UserID: userId }  // userId 사용
+        });
+
+        if (!find) {
+            return res.status(404).json({
+                result: false,
+                message: '사용자를 찾을 수 없습니다.'
+            });
+        }
+
+        res.json({ 
+            result: true, 
+            data: find 
+        });
+
+    } catch(error) {
+        console.error('포인트 조회 중 오류:', error);
+        console.error(error.stack);
+        res.status(500).json({
+            result: false,
+            message: '포인트 조회 중 오류가 발생했습니다.'
+        });
+    }
+};
+
+const usercoupon = async(req,res) =>{
+    try{
+        const {userId} = req.body
+        console.log(req.body,'쿠폰쿠폰');
+        const find = await UserCoupon.findOne({where: { UserID: userId }})
+        res.json({result: true, data: find });
+    }catch(error){
+        res.status(500).json({
+            result: false,
+            message: '쿠폰 조회 중 오류가 발생했습니다.'
+        });
+    }
+}
+
+const transaction = async(req,res) =>{
+    try {
+        const { 
+            orderListId, 
+            userId,
+            totalAmount,
+            paymentAmount, 
+            pointUsed,
+            paymentMethod, 
+            status 
+        } = req.body;
+
+        // 트랜잭션 생성
+        const transaction = await Transactions.create({
+            OrderListID: orderListId,
+            UserID: userId,
+            TotalAmount: totalAmount,
+            PaymentAmount: paymentAmount,
+            PointUsed: pointUsed || 0,
+            PaymentMethod: paymentMethod,
+            Status: status,
+            TransactionDate: new Date()
+        });
+
+        // 주문 상태 업데이트
+        await OrderList.update(
+            { Status: 'PAID' },
+            { where: { OrderListID: orderListId } }
+        );
+
+        // 포인트 사용 기록 (포인트를 사용했을 경우)
+        if (pointUsed > 0) {
+            await Points.create({
+                UserID: userId,
+                Amount: -pointUsed,  // 마이너스로 기록
+                TransactionID: transaction.TransactionID,
+                Description: '상품 구매 시 포인트 사용',
+                Points_date: new Date()
+            });
+        }
+
+        // 구매 포인트 적립 (결제 금액의 1% 적립 예시)
+        const earnedPoints = Math.floor(paymentAmount * 0.01);
+        if (earnedPoints > 0) {
+            await Points.create({
+                UserID: userId,
+                Amount: earnedPoints,
+                TransactionID: transaction.TransactionID,
+                Description: '상품 구매 적립',
+                Points_date: new Date()
+            });
+        }
+
+        res.json({
+            result: true,
+            data: transaction,
+            earnedPoints
+        });
+        
+    } catch (error) {
+        console.error('거래 내역 저장 중 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '거래 내역 저장 중 오류가 발생했습니다.'
+        });
+    }
+}
+const latestorder = async (req, res) => {
+    try {
+        const order = await OrderList.findOne({
+            order: [['createdAt', 'DESC']], 
+            where: {
+                Status: 'PENDING'
+            }
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                result: false,
+                message: '대기중인 주문을 찾을 수 없습니다.'
+            });
+        }
+
+        res.json({
+            result: true,
+            orderListId: order.OrderListID,
+            userId: order.UserID,
+            totalAmount: order.Amount,
+            paymentAmount: order.Amount, // 포인트 사용 전 금액
+            customerName: order.CustomerName
+        });
+    } catch (error) {
+        console.error('주문 조회 중 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '주문 조회 중 오류가 발생했습니다.'
+        });
+    }
+};
+const searchproduct = async(req,res) =>{
+    const { query } = req.query;
+    try {
+        const products = await Products.findAll({
+            where: {
+                ProductName: {
+                    [Op.like]: `%${query}%`  // 부분 일치 검색을 위해 LIKE 사용
+                }
+            },
+            limit: 10
+        });
+        res.json({
+            result: true, 
+            data: products
+        });
+    } catch (error) {
+        console.error('검색 에러:', error);
+        res.status(500).json({ error: '검색 중 오류가 발생했습니다.' });
+    }
+}
 module.exports = {
     signup,
     login,
@@ -614,5 +843,11 @@ module.exports = {
     reviewwrite,
     productinfo,
     checkSession,
-    buy
+    buy,
+    order,
+    point,
+    usercoupon,
+    transaction,
+    latestorder,
+    searchproduct
 };

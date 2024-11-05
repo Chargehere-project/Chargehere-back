@@ -133,8 +133,6 @@ const applyAssociations = (db) => {
         onDelete: 'CASCADE',
     });
 
-
-
     // 주문 목록과 장바구니(1:N) - 주문이 삭제되면 관련 장바구니도 삭제
     OrderList.hasMany(Cart, {
         foreignKey: 'OrderListID',
@@ -280,6 +278,19 @@ const applyAssociations = (db) => {
     });
 
     Reviews.belongsTo(Products, {
+        foreignKey: 'ProductID',
+        targetKey: 'ProductID',
+    });
+
+    // 상품과 주문 목록(1:N) - 상품이 삭제되면 관련 주문도 삭제
+
+    Products.hasMany(OrderList, {
+        foreignKey: 'ProductID',
+        sourceKey: 'ProductID',
+        onDelete: 'CASCADE',
+    });
+
+    OrderList.belongsTo(Products, {
         foreignKey: 'ProductID',
         targetKey: 'ProductID',
     });

@@ -32,9 +32,9 @@ module.exports = (seq, DataTypes) => {
                 allowNull: true,
             },
             Status: {
-                type: DataTypes.ENUM('active', 'inactive', 'deleted'), // 상태 추가
+                type: DataTypes.ENUM('active', 'inactive', 'deleted'),
                 allowNull: false,
-                defaultValue: 'active', // 기본값 설정
+                defaultValue: 'active',
             },
         },
         {

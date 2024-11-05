@@ -1,6 +1,6 @@
 module.exports = (seq, DataTypes) => {
     return seq.define(
-        'OrderList', // 모델 이름을 OrderList로 설정
+        'OrderList', 
         {
             OrderListID: {
                 type: DataTypes.INTEGER,
@@ -16,7 +16,7 @@ module.exports = (seq, DataTypes) => {
                 allowNull: false,
             },
             Amount: {
-                type: DataTypes.DECIMAL(10, 2),
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
             OrderDate: {
@@ -42,8 +42,8 @@ module.exports = (seq, DataTypes) => {
             },
         },
         {
-            timestamps: true, // createdAt, updatedAt 필드 자동 추가
-            tableName: 'OrderList', // 테이블 이름을 'OrderList'로 설정
+            timestamps: true, 
+            tableName: 'OrderList', 
         }
     );
 };

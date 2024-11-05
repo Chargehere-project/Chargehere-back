@@ -19,7 +19,6 @@ db.Coupons = require('./Coupons')(sequelize, Sequelize);
 db.UserCoupon = require('./UserCoupon')(sequelize, Sequelize);
 db.Categories = require('./Categories')(sequelize, Sequelize);
 db.Admin = require('./Admin')(sequelize, Sequelize);
-db.Banner = require('./Banner')(sequelize, Sequelize);
 db.Notice = require('./Notice')(sequelize, Sequelize);
 db.Reviews = require('./Reviews')(sequelize, Sequelize);
 db.QnA = require('./QnA')(sequelize, Sequelize);

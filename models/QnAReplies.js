@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
             },
             ProductID: {
                 type: DataTypes.INTEGER,
-                allowNull: false, // ProductID는 반드시 필요
+                allowNull: false,
             },
             ReplyContent: {
                 type: DataTypes.TEXT,

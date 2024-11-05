@@ -18,7 +18,7 @@ module.exports = (seq, DataTypes) => {
             IsUsed: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
-                defaultValue: false, // 기본값을 false로 설정
+                defaultValue: false, 
             },
             IssuedAt: {
                 type: DataTypes.DATEONLY,

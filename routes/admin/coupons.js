@@ -10,7 +10,7 @@ const {
     getIssuedCoupons,
     updateCouponStatus,
     searchCoupons,
-    // getTotalUserCouponsCount,
+    getTotalUserCouponsCount,
 } = require('../../controller/admin/CouponController');
 
 router.post('/', verifyToken, createCoupon);
@@ -20,6 +20,6 @@ router.put('/:couponID', verifyToken, editCoupon);
 router.get('/issued', verifyToken, getIssuedCoupons);
 router.put('/:id/status', verifyToken, updateCouponStatus);
 router.get('/search', verifyToken, searchCoupons);
-// router.get('/count', verifyToken, getTotalUserCouponsCount);
+router.get('/count', verifyToken, getTotalUserCouponsCount);
 
 module.exports = router;

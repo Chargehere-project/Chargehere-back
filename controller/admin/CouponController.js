@@ -1,6 +1,7 @@
 // controller/admin/CouponController.js
 const { User, Coupons, UserCoupon } = require('../../models');
 const { Op } = require('sequelize');
+const Sequelize = require('sequelize');
 
 // 새로운 쿠폰 생성
 // 쿠폰 생성 로직
@@ -305,6 +306,19 @@ const searchCoupons = async (req, res) => {
     }
 };
 
+// 유저 쿠폰 총 개수 가져오기
+const getTotalUserCouponsCount = async (req, res) => {
+    try {
+        // UserCoupon 테이블에서 전체 행의 개수를 가져옴
+        const count = await UserCoupon.count();
+        
+        res.json({ count });
+    } catch (error) {
+        console.error('UserCoupon 총 개수 가져오기 실패:', error);
+        res.status(500).json({ message: 'UserCoupon 총 개수 가져오기 실패', error });
+    }
+};
+
 
 module.exports = {
     createCoupon,
@@ -314,5 +328,5 @@ module.exports = {
     getIssuedCoupons,
     updateCouponStatus,
     searchCoupons,
-    // getTotalUserCouponsCount,
+    getTotalUserCouponsCount,
 };

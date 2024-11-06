@@ -1,4 +1,4 @@
-const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions } = require('../../models');
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Coupons } = require('../../models');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
@@ -298,25 +298,29 @@ const products = async (req, res) => {
 const orderlist = async (req, res) => {
     try {
         const { userId } = req.body;
+        console.log('오더리스트 아이디', userId)
         const orders = await OrderList.findAll({
-            where: { UserID: userId },
+            where: { 
+                UserID: userId,
+                OrderStatus: ['Completed', 'Cancelled']
+            },
             include: [
                 {
-                    model: Product,
+                    model: Products,
                     attributes: ['ProductID', 'ProductName'],
                 },
                 {
-                    model: Review,
+                    model: Reviews,
                     attributes: ['ReviewID'],
                     required: false,
-                },
+                }
             ],
+            order: [['createdAt', 'DESC']]
         });
 
-        // hasReview 필드 추가
         const ordersWithReviewStatus = orders.map((order) => ({
             ...order.toJSON(),
-            hasReview: !!order.Review, // Review가 존재하면 true, 없으면 false
+            hasReview: !!order.Review
         }));
 
         res.json({
@@ -331,6 +335,7 @@ const orderlist = async (req, res) => {
         });
     }
 };
+
 const cart = async (req, res) => {
     try {
         const { userId } = req.body;
@@ -857,31 +862,77 @@ const confirm = async(req,res) => {
 
   try {
     const response = await axios({
-      method: 'post',
-      url: 'https://api.tosspayments.com/v1/payments/confirm',
-      headers: {
-        Authorization: encryptedSecretKey,
-        'Content-Type': 'application/json'
-      },
-      data: {  // axios는 data 속성 사용
-        orderId: orderId,
-        amount: amount,
-        paymentKey: paymentKey,
-      }
+        method: 'post',
+        url: 'https://api.tosspayments.com/v1/payments/confirm',
+        headers: {
+            Authorization: encryptedSecretKey,
+            'Content-Type': 'application/json'
+        },
+        data: {
+            orderId: orderId,
+            amount: amount,
+            paymentKey: paymentKey,
+        }
     });
 
-    // 결제 성공 비즈니스 로직을 구현하세요.
-    console.log(response.data);  // axios는 .data로 응답 본문에 접근
-    res.status(response.status).json(response.data);
+    // 결제 성공 시 OrderStatus 업데이트
+    try {
+        await OrderList.update(
+            { 
+                OrderStatus: 'Completed',
+                PaymentDate: new Date()  // 결제 완료 시간도 함께 저장
+            },
+            {
+                where: { OrderID: orderId }
+            }
+        );
+
+        console.log('주문 상태 업데이트 성공:', orderId);
+        console.log(response.data);
+        
+        res.status(response.status).json({
+            ...response.data,
+            orderStatus: 'Completed'
+        });
+    } catch (updateError) {
+        console.error('주문 상태 업데이트 실패:', updateError);
+        // 결제는 성공했지만 상태 업데이트 실패
+        res.status(500).json({
+            success: true,
+            payment: response.data,
+            error: '결제는 성공했으나 주문 상태 업데이트에 실패했습니다.'
+        });
+    }
     
-  } catch (error) {
-    // 결제 실패 비즈니스 로직을 구현하세요.
+} catch (error) {
     console.log(error.response.data);
     res.status(error.response.status).json(error.response.data);
-  }
+}
 }
 
-
+const savecart = async (req, res) => { 
+    try {
+        const { userId, productId, quantity, price } = req.body;
+        console.log('장바구니 저장', req.body)
+        const result = await Cart.create({ 
+            UserID: userId,
+            ProductID: productId,
+            Quantity: quantity,
+            Price: price
+        });
+        
+        res.json({ 
+            result: true,
+            data: result 
+        });
+    } catch (error) {
+        console.error('장바구니 추가 오류:', error); 
+        res.status(500).json({
+            result: false,
+            message: '장바구니 추가 실패'
+        });
+    }
+}
 module.exports = {
     signup,
     login,
@@ -911,4 +962,5 @@ module.exports = {
     latestorder,
     searchproduct,
     confirm,
+    savecart
 };

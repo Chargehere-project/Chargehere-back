@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, login, notice,everydayevent, notices, getChargers, name, chargelist, point, couponlist, products, orderlist, cart, quantity, deletecart, order,prepareOrder, findid, checkid, reviewwrite,productinfo,checkSession, buy, usercoupon, transaction, latestorder, searchproduct, confirm, fail } = require('../../controller/front');
+const { signup, login, notice,everydayevent, notices, getChargers, name, chargelist, point, couponlist, products, orderlist, cart, quantity, deletecart, order,prepareOrder, findid, checkid, reviewwrite,productinfo,checkSession, buy, usercoupon, transaction, latestorder, searchproduct, confirm, fail, savecart } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
 
@@ -34,4 +34,5 @@ router.post('/transaction',transaction)
 router.get('/order/latest',latestorder)
 router.get('/search', searchproduct)
 router.post("/confirm",confirm)
+router.post('/savecart', savecart)
 module.exports = router;

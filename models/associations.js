@@ -12,7 +12,6 @@ const applyAssociations = (db) => {
         UserCoupon,
         Categories,
         Admin,
-        Banner,
         Notice,
         Reviews,
         QnA,
@@ -294,6 +293,19 @@ const applyAssociations = (db) => {
         foreignKey: 'ProductID',
         targetKey: 'ProductID',
     });
+    // OrderList와 Reviews의 관계 추가 (1:1)
+    OrderList.hasOne(Reviews, {
+        foreignKey: 'OrderListID',  // OrderID 대신 OrderListID 사용
+        sourceKey: 'OrderListID',
+        onDelete: 'CASCADE'
+    });
+    
+    Reviews.belongsTo(OrderList, {
+        foreignKey: 'OrderListID',  // OrderID 대신 OrderListID 사용
+        targetKey: 'OrderListID'
+    });
+
 };
+
 
 module.exports = applyAssociations;

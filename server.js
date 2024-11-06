@@ -63,7 +63,7 @@ app.use('/api/admin/auth', adminAuthRouter);
 
 // Sequelize 동기화
 db.sequelize
-    .sync({ force: false })
+    .sync({ force: true })
     .then(() => {
         console.log('데이터베이스가 동기화되었습니다.');
 

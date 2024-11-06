@@ -1,9 +1,10 @@
-const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews } = require('../../models');
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions } = require('../../models');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
 const { Op } = require('sequelize');
 const nodemailer = require('nodemailer');
+
 
 const signup = async (req, res) => {
     console.log(req.body, '회원가입');
@@ -703,48 +704,61 @@ const usercoupon = async(req,res) =>{
     }
 }
 
-const transaction = async(req,res) =>{
+const transaction = async(req, res) => {
     try {
+        console.log('받은 요청 데이터:', req.body);
+        
         const { 
-            orderListId, 
+            orderListId,  // 주의: orderListId로 받음
             userId,
             totalAmount,
             paymentAmount, 
             pointUsed,
             paymentMethod, 
-            status 
+            status,
+            recipientInfo 
         } = req.body;
 
-        // 트랜잭션 생성
+        // 트랜잭션 생성 - OrderListID로 필드명 맞춤
         const transaction = await Transactions.create({
-            OrderListID: orderListId,
+            OrderListID: orderListId,  // orderListId를 OrderListID로 매핑
             UserID: userId,
             TotalAmount: totalAmount,
             PaymentAmount: paymentAmount,
             PointUsed: pointUsed || 0,
             PaymentMethod: paymentMethod,
-            Status: status,
             TransactionDate: new Date()
         });
 
         // 주문 상태 업데이트
         await OrderList.update(
-            { Status: 'PAID' },
+            { 
+                Status: 'PAID',
+                CustomerName: recipientInfo.name,
+                CustomerPhoneNumber: recipientInfo.phone,
+                CustomerAddress: recipientInfo.address
+            },
             { where: { OrderListID: orderListId } }
         );
 
-        // 포인트 사용 기록 (포인트를 사용했을 경우)
+        // 포인트 사용 기록 
         if (pointUsed > 0) {
             await Points.create({
                 UserID: userId,
-                Amount: -pointUsed,  // 마이너스로 기록
+                Amount: -pointUsed,
                 TransactionID: transaction.TransactionID,
                 Description: '상품 구매 시 포인트 사용',
                 Points_date: new Date()
             });
+
+            // 사용자 포인트 차감
+            await User.decrement('Points', {
+                by: pointUsed,
+                where: { UserID: userId }
+            });
         }
 
-        // 구매 포인트 적립 (결제 금액의 1% 적립 예시)
+        // 구매 포인트 적립 (결제 금액의 1%)
         const earnedPoints = Math.floor(paymentAmount * 0.01);
         if (earnedPoints > 0) {
             await Points.create({
@@ -752,24 +766,34 @@ const transaction = async(req,res) =>{
                 Amount: earnedPoints,
                 TransactionID: transaction.TransactionID,
                 Description: '상품 구매 적립',
-                Points_date: new Date()
+                Points_date: new Date(),
+                ChargeDate:  new Date(),
+                ChargeType: 'Earned'
+            });
+
+            // 사용자 포인트 증가
+            await User.increment('Points', {
+                by: earnedPoints,
+                where: { UserID: userId }
             });
         }
 
         res.json({
-            result: true,
+            success: true,
             data: transaction,
-            earnedPoints
+            earnedPoints,
+            message: '거래가 성공적으로 처리되었습니다.'
         });
         
     } catch (error) {
         console.error('거래 내역 저장 중 오류:', error);
         res.status(500).json({
-            result: false,
-            message: '거래 내역 저장 중 오류가 발생했습니다.'
+            success: false,
+            message: '거래 내역 저장 중 오류가 발생했습니다.',
+            error: error.message
         });
     }
-}
+};
 const latestorder = async (req, res) => {
     try {
         const order = await OrderList.findOne({
@@ -822,6 +846,42 @@ const searchproduct = async(req,res) =>{
         res.status(500).json({ error: '검색 중 오류가 발생했습니다.' });
     }
 }
+
+const confirm = async(req,res) => {
+  // 클라이언트에서 받은 JSON 요청 바디입니다.
+  const { paymentKey, orderId, amount } = req.body;
+
+  // 토스페이먼츠 API는 시크릿 키를 사용자 ID로 사용하고, 비밀번호는 사용하지 않습니다.
+  const widgetSecretKey = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
+  const encryptedSecretKey = "Basic " + Buffer.from(widgetSecretKey + ":").toString("base64");
+
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'https://api.tosspayments.com/v1/payments/confirm',
+      headers: {
+        Authorization: encryptedSecretKey,
+        'Content-Type': 'application/json'
+      },
+      data: {  // axios는 data 속성 사용
+        orderId: orderId,
+        amount: amount,
+        paymentKey: paymentKey,
+      }
+    });
+
+    // 결제 성공 비즈니스 로직을 구현하세요.
+    console.log(response.data);  // axios는 .data로 응답 본문에 접근
+    res.status(response.status).json(response.data);
+    
+  } catch (error) {
+    // 결제 실패 비즈니스 로직을 구현하세요.
+    console.log(error.response.data);
+    res.status(error.response.status).json(error.response.data);
+  }
+}
+
+
 module.exports = {
     signup,
     login,
@@ -849,5 +909,6 @@ module.exports = {
     usercoupon,
     transaction,
     latestorder,
-    searchproduct
+    searchproduct,
+    confirm,
 };

@@ -12,7 +12,6 @@ const applyAssociations = (db) => {
         UserCoupon,
         Categories,
         Admin,
-        Banner,
         Notice,
         Reviews,
         QnA,

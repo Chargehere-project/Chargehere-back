@@ -27,7 +27,7 @@ module.exports = (seq, DataTypes) => {
             Status: {
                 type: DataTypes.ENUM('active', 'expired', 'deleted'),
                 allowNull: false,
-                defaultValue: 'active', // 기본값을 'active'로 설정
+                defaultValue: 'active', 
             },
         },
         {

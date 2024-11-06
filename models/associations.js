@@ -258,18 +258,6 @@ const applyAssociations = (db) => {
         targetKey: 'AdminID',
     });
 
-    // 관리자와 배너(1:N) - 관리자가 삭제되면 관련 배너도 삭제
-    Admin.hasMany(Banner, {
-        foreignKey: 'AdminID',
-        sourceKey: 'AdminID',
-        onDelete: 'CASCADE',
-    });
-
-    Banner.belongsTo(Admin, {
-        foreignKey: 'AdminID',
-        targetKey: 'AdminID',
-    });
-
     // 사용자와 리뷰(1:N) - 사용자가 삭제되면 관련 리뷰도 삭제
     User.hasMany(Reviews, {
         foreignKey: 'UserID',

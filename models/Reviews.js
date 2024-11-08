@@ -11,6 +11,10 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false,
             },
+            OrderListID: {  // OrderID 대신 OrderListID로 수정
+                type: DataTypes.INTEGER,
+                allowNull: false
+            },
             ProductID: {
                 type: DataTypes.INTEGER,
                 allowNull: false,

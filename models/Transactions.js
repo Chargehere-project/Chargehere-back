@@ -11,9 +11,13 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false, // 트랜잭션은 반드시 유저와 연관되어야 함
             },
-            OrderID: {
+            OrderListID: {  // OrderID를 OrderListID로 변경
                 type: DataTypes.INTEGER,
-                allowNull: false, // 트랜잭션은 반드시 주문과 연관되어야 함
+                allowNull: false,
+                references: {
+                    model: 'OrderList',
+                    key: 'OrderListID'
+                }
             },
             TotalAmount: {
                 type: DataTypes.DECIMAL(10, 2),

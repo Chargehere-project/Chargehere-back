@@ -254,7 +254,7 @@ const chargelist = async (req, res) => {
     try {
         const { userId } = req.body;
         console.log(req.body, '충전내역');
-        const find = await Points.findAll({ where: { UserID: userId }, order: [['ChargeDate', 'DESC']], limit: 5 });
+        const find = await Points.findAll({ where: { UserID: userId }, order: [['createdAt', 'DESC']], limit: 5 });
         res.json({ result: true, data: find });
     } catch (error) {
         console.error('충전내역 오류', error);
@@ -759,6 +759,11 @@ const order = async (req, res) => {
             });
         }
 
+        // 총 금액 계산
+        const totalAmount = orderItems.reduce((sum, item) => {
+            return sum + (item.Product.Price * item.Quantity);
+        }, 0);
+
         // 프론트엔드 인터페이스에 맞게 데이터 구조화
         const formattedOrder = {
             orderListId: orderListData.OrderListID,
@@ -768,11 +773,11 @@ const order = async (req, res) => {
             items: orderItems.map(item => ({
                 productID: item.Product.ProductID,
                 productName: item.Product.ProductName,
-                quantity: item.Quantity, // OrderItem의 수량
+                quantity: item.Quantity,
                 price: item.Product.Price,
                 image: item.Product.Image
             })),
-            totalAmount: orderListData.Amount,
+            totalAmount: totalAmount,
             discount: 0,
             paymentAmount: orderListData.Amount
         };
@@ -887,7 +892,9 @@ const transaction = async(req, res) => {
                 Amount: -pointUsed,
                 TransactionID: transaction.TransactionID,
                 Description: '상품 구매 시 포인트 사용',
-                Points_date: new Date()
+                Points_date: new Date(),
+                ChargeDate: new Date(),  // 현재 날짜 설정
+                ChargeType: 'Used',   // 포인트 사용 타입
             });
 
             // 사용자 포인트 차감

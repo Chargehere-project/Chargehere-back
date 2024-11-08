@@ -12,5 +12,6 @@ router.use('/qnas', require('./qnas'));
 router.use('/notices', require('./notices'));
 // router.use('/banners', require('./banners'));
 router.use('/auth', require('./auth'));
+router.use('/', require('./upload'));
 
 module.exports = router;

@@ -11,7 +11,8 @@ const noticeController = require('./NoticeController');
 // const bannerController = require('./BannerController');
 // const authController = require('./AdminAuthController');
 const { adminLogin } = require('./AdminAuthController'); // 개별 메서드로 불러오기
-const pointsController = require('./PointsController');
+const pointsController = require('./PointsController'); 
+const uploadController = require('./UploadController');
 
 // Export all controllers
 module.exports = {
@@ -26,4 +27,5 @@ module.exports = {
     // ...authController,
     adminLogin, // 개별 메서드로 추가
     ...pointsController,
+    ...uploadController,
 };

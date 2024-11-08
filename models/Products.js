@@ -16,11 +16,11 @@ module.exports = (seq, DataTypes) => {
                 allowNull: false,
             },
             Price: {
-                type: DataTypes.DECIMAL(10, 2),
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
             Discount: {
-                type: DataTypes.DECIMAL(8, 2),
+                type: DataTypes.INTEGER,
                 allowNull: true,
             },
             Image: {

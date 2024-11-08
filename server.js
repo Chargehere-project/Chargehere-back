@@ -51,7 +51,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 프론트엔드용 라우터 설정
 const frontRouter = require('./routes/front');
-app.use('/', frontRouter);
+app.use('/api', frontRouter);
 
 // 관리자 API 라우터 설정
 const adminRouter = require('./routes/admin');
@@ -63,7 +63,7 @@ app.use('/api/admin/auth', adminAuthRouter);
 
 // Sequelize 동기화
 db.sequelize
-    .sync({ force: true })
+    .sync({ force: false })
     .then(() => {
         console.log('데이터베이스가 동기화되었습니다.');
 

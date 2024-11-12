@@ -5,6 +5,7 @@ const db = require('./models');
 const cors = require('cors');
 const session = require('express-session'); 
 const FileStore = require('session-file-store')(session);
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = 8000;
@@ -35,16 +36,17 @@ app.use(session({
 
 // 세션 작동 확인용 미들웨어
 app.use((req, res, next) => {
-    console.log('Request Session:', {
-        sessionID: req.sessionID,
-        session: req.session,
-        cookies: req.cookies
-    });
+    // console.log('Request Session:', {
+    //     sessionID: req.sessionID,
+    //     session: req.session,
+    //     cookies: req.cookies
+    // });
     next();
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // /uploads 폴더를 정적으로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

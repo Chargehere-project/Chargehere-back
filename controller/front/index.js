@@ -236,7 +236,17 @@ const name = async (req, res) => {
     try {
         const { userId } = req.body;
         const find = await User.findOne({ where: { UserID: userId } });
-        res.json({ result: true, name: find.Name, point: find.Points });
+
+        if (!find) {
+            return res.status(404).json({ result: false, message: '사용자를 찾을 수 없습니다.' });
+        }
+
+        res.json({
+            result: true,
+            name: find.Name,
+            point: find.Points,
+            loginID: find.LoginID,
+        });
     } catch (error) {
         console.error('이름과 포인트 조회 오류', error);
         res.status(500).json({ result: false, message: '서버 오류' });
@@ -384,6 +394,9 @@ const orderlist = async (req, res) => {
     }
 };
 
+
+
+
 const cart = async (req, res) => {
     try {
         const { userId } = req.body;
@@ -394,19 +407,21 @@ const cart = async (req, res) => {
         if (!userId) {
             return res.status(400).json({
                 result: false,
-                message: 'userId가 필요합니다.'
+                message: 'userId가 필요합니다.',
             });
         }
 
         const cartItems = await Cart.findAll({
-            where: { 
-                UserID: userId  // 컬럼명 확인
+            where: {
+                UserID: userId,
             },
-            include: [{
-                model: Products,
-                attributes: ['ProductID', 'ProductName'],
-                required: false
-            }],
+            include: [
+                {
+                    model: Products,
+                    attributes: ['ProductID', 'ProductName', 'Image', 'Price'], // 'Price' 추가
+                    required: false,
+                },
+            ],
         });
 
         // 조회 결과 로그
@@ -414,18 +429,18 @@ const cart = async (req, res) => {
 
         res.json({
             result: true,
-            data: cartItems
+            data: cartItems,
         });
-
     } catch (error) {
         console.error('장바구니 조회 오류:', error);
         res.status(500).json({
             result: false,
             message: '장바구니 조회 실패',
-            error: error.message  // 에러 메시지 추가
+            error: error.message, // 에러 메시지 추가
         });
     }
 };
+
 const quantity = async (req, res) => {
     try {
         const { cartId, quantity } = req.body;
@@ -649,22 +664,43 @@ const findpw = async (req, res) => {
 };
 const reviewwrite = async (req, res) => {
     try {
-        const { userId, productId, rating, content, orderId } = req.body;
-        console.log(req.body, '리뷰쓰기');
+        // 요청된 데이터 확인
+        console.log('리뷰쓰기 요청 데이터:', req.body);
 
-        const find = await Reviews.create({
+        const { userId, productId, rating, content, orderId } = req.body;
+        if (!userId || !productId || !rating || !content || !orderId) {
+            console.error('필수 데이터가 누락되었습니다:', req.body);
+            return res.status(400).json({ result: false, message: '필수 데이터가 누락되었습니다.' });
+        }
+
+        // 리뷰 데이터 확인
+        const reviewData = {
             UserID: userId,
             ProductID: productId,
             Rating: rating,
             Content: content,
             ReviewDate: new Date(),
-        });
+        };
+
+        console.log('리뷰 작성 데이터:', reviewData); // 삽입할 데이터 확인
+
+        // 데이터베이스에 리뷰 삽입
+        const find = await Reviews.create(reviewData);
+
+        // 성공적인 삽입 확인
+        console.log('리뷰 작성 완료:', find);
+
         res.json({ result: true, message: '리뷰작성완료' });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ result: false, message: '서버오류' });
+        // 오류 발생 시 에러 로그
+        console.error('리뷰 작성 오류:', error);
+
+        // 에러를 클라이언트에 전달
+        res.status(500).json({ result: false, message: '서버오류', error: error.message });
     }
 };
+
+
 const productinfo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -1438,6 +1474,46 @@ const getCartCount = async (req, res) => {
     }
 };
 
+
+const getOrderSummary = async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        // OrderStatus가 'Pending'인 주문 수 확인
+        const pendingOrders = await OrderList.count({
+            where: { UserID: userId, OrderStatus: 'Pending' }
+        });
+        console.log('입금대기중 (Pending) 주문 수:', pendingOrders);
+
+        // Transactions 테이블에서 Status가 'Completed'인 결제완료 수 확인
+        const completedTransactions = await Transactions.count({
+            where: { UserID: userId, Status: 'Completed' }
+        });
+        console.log('결제완료 (Completed) 거래 수:', completedTransactions);
+
+        // OrderStatus가 'Completed'인 주문 수 확인
+        const completedOrders = await OrderList.count({
+            where: { UserID: userId, OrderStatus: 'Completed' }
+        });
+        console.log('배송완료 (Completed) 주문 수:', completedOrders);
+
+        res.json({
+            result: true,
+            data: {
+                pending: pendingOrders,
+                inPreparation: 0, // 배송준비중은 비워둡니다.
+                shipping: 0,
+                completed: completedOrders,
+            },
+            completedTransactions: completedTransactions
+        });
+    } catch (error) {
+        console.error('주문 요약 데이터 조회 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+
+
 module.exports = {
     signup,
     login,
@@ -1475,6 +1551,7 @@ module.exports = {
     checkUser,
     sendVerificationCode,
     resetPassword,
+    getOrderSummary,
     updateprofile,
     userinfo,
     createReview,

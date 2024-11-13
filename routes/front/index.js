@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, login, notice,everydayevent, notices, getChargers, deleteAllCartItems,resetPassword, sendVerificationCode, checkUser, name, chargelist, point, couponlist, products, newproducts, orderlist, cart, quantity, deletecart, order,prepareOrder, findid, checkid, reviewwrite,productinfo,checkSession, buy, usercoupon, transaction, latestorder, searchproduct, confirm, createOrder, savecart, saleproducts } = require('../../controller/front');
+const { signup, login, notice,everydayevent, notices, userinfo, getCartCount, getChargers, getProductReviews, deleteAllCartItems,resetPassword, updateprofile,sendVerificationCode, checkUser, name, chargelist, point, couponlist, products, newproducts, orderlist, cart, quantity, deletecart, order,prepareOrder, findid, checkid, reviewwrite,productinfo,checkSession, buy, usercoupon, transaction, latestorder, searchproduct, confirm, createOrder, savecart, saleproducts, createReview } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
 
@@ -43,5 +43,10 @@ router.post('/cart/alldelete',deleteAllCartItems)
 router.post('/check-user', checkUser);
 router.post('/send-mail', sendVerificationCode);
 router.post('/reset-password', resetPassword);
+router.post('/updateProfile',updateprofile)
+router.post('/userinfo',userinfo)
+router.post('/reviews',createReview)
+router.get('/reviews/product/:id',getProductReviews)
+router.post('/cart/count', getCartCount)
 
 module.exports = router;

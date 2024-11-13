@@ -4,11 +4,15 @@ const {
     login,
     notice,
     everydayevent,
-    notices, userinfo, getCartCount,
-    getChargers, getProductReviews,
+    notices,
+    userinfo,
+    getCartCount,
+    getChargers,
+    getProductReviews,
     deleteAllCartItems,
     resetPassword,
-    updateprofile,sendVerificationCode,
+    updateprofile,
+    sendVerificationCode,
     checkUser,
     name,
     chargelist,
@@ -35,8 +39,10 @@ const {
     confirm,
     createOrder,
     savecart,
-    saleproducts, createReview,
+    saleproducts,
+    createReview,
     getOrderSummary,
+    getProfile,
 } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
@@ -82,10 +88,12 @@ router.post('/check-user', checkUser);
 router.post('/send-mail', sendVerificationCode);
 router.post('/reset-password', resetPassword);
 router.post('/order-summary', getOrderSummary);
-router.post('/updateProfile',updateprofile)
 router.post('/userinfo',userinfo)
 router.post('/reviews',createReview)
 router.get('/reviews/product/:id',getProductReviews)
 router.post('/cart/count', getCartCount)
+router.put('/user/updateprofile', updateprofile);
+router.get('/user/profile', auth, getProfile);
+
 
 module.exports = router;

@@ -4,11 +4,11 @@ const {
     login,
     notice,
     everydayevent,
-    notices,
-    getChargers,
+    notices, userinfo, getCartCount,
+    getChargers, getProductReviews,
     deleteAllCartItems,
     resetPassword,
-    sendVerificationCode,
+    updateprofile,sendVerificationCode,
     checkUser,
     name,
     chargelist,
@@ -35,7 +35,7 @@ const {
     confirm,
     createOrder,
     savecart,
-    saleproducts,
+    saleproducts, createReview,
     getOrderSummary,
 } = require('../../controller/front');
 const router = express.Router();
@@ -82,5 +82,10 @@ router.post('/check-user', checkUser);
 router.post('/send-mail', sendVerificationCode);
 router.post('/reset-password', resetPassword);
 router.post('/order-summary', getOrderSummary);
+router.post('/updateProfile',updateprofile)
+router.post('/userinfo',userinfo)
+router.post('/reviews',createReview)
+router.get('/reviews/product/:id',getProductReviews)
+router.post('/cart/count', getCartCount)
 
 module.exports = router;

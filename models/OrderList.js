@@ -34,11 +34,11 @@ module.exports = (seq, DataTypes) => {
             },
             CustomerPhoneNumber: {
                 type: DataTypes.STRING(20),
-                allowNull: false,
+                allowNull: true,
             },
             CustomerAddress: {
                 type: DataTypes.STRING(255),
-                allowNull: false,
+                allowNull: true,
             },
         },
         {

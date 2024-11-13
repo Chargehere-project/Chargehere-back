@@ -1,39 +1,34 @@
-    const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Coupons, OrderItem } = require('../../models');
-    const jwt = require('jsonwebtoken');
-    const axios = require('axios');
-    const { where } = require('sequelize');
-    const { Op } = require('sequelize');
-    const nodemailer = require('nodemailer');
-    const bcrypt = require('bcrypt');
 
-    const signup = async (req, res) => {
-        console.log(req.body, '회원가입');
-        const { id, password, name, residence, phone } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Inquiries,Coupons, OrderItem, InquiryReplies } = require('../../models');
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const { where } = require('sequelize');
+const { Op } = require('sequelize');
+const nodemailer = require('nodemailer');
+const bcrypt = require('bcrypt');
 
-        const result = await User.create({
-            LoginID: id,
-            Password: hashedPassword,
-            Name: name,
-            Address: residence,
-            PhoneNumber: phone,
-            Points: 0,
-            JoinDate: new Date(),
-        });
-        res.json({ result: true });
-    };
-    // controllers/front/index.js의 login 함수 수정
-    // controllers/front/index.js
-    const login = async (req, res) => {
-        try {
-            const { id, password } = req.body;
+const signup = async (req, res) => {
+    console.log(req.body, '회원가입');
+    const { id, password, name, residence, phone } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-            // 사용자 조회
-            const user = await User.findOne({ where: { LoginID: id } });
+    const result = await User.create({
+        LoginID: id,
+        Password: hashedPassword,
+        Name: name,
+        Address: residence,
+        PhoneNumber: phone,
+        Points: 0,
+        JoinDate: new Date(),
+    });
+    res.json({ result: true });
+};
+// controllers/front/index.js의 login 함수 수정
+// controllers/front/index.js
+const login = async (req, res) => {
+    try {
+        const { id, password } = req.body;
 
-            if (!user) {
-                return res.status(404).json({ result: false, message: '회원이 아닙니다.' });
-            }
 
             // 비밀번호 검증
             const isPasswordValid = await bcrypt.compare(password, user.Password);
@@ -400,9 +395,28 @@
     const cart = async (req, res) => {
         try {
             const { userId } = req.body;
-
-            // userId 확인용 로그
-            console.log('요청된 userId:', userId);
+const orderlist = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        console.log('오더리스트 아이디', userId);
+        
+        const orderItems = await OrderItem.findAll({
+            include: [
+                {
+                    model: OrderList,
+                    where: { 
+                        UserID: userId,
+                        OrderStatus: ['Pending','Completed', 'Cancelled']
+                    },
+                    attributes: ['OrderDate', 'OrderStatus']
+                },
+                {
+                    model: Products,
+                    attributes: ['ProductID', 'ProductName', 'Image']
+                }
+            ],
+            order: [[{ model: OrderList }, 'createdAt', 'DESC']]
+        });
 
             if (!userId) {
                 return res.status(400).json({
@@ -1522,6 +1536,7 @@
                 return res.status(404).json({ result: false, message: '사용자를 찾을 수 없습니다.' });
             }
 
+
             res.json({
                 result: true,
                 data: user,
@@ -1537,48 +1552,105 @@
 
 
 
-    module.exports = {
-        signup,
-        login,
-        notice,
-        everydayevent,
-        notices,
-        getChargers,
-        name,
-        chargelist,
-        couponlist,
-        products,
-        orderlist,
-        cart,
-        quantity,
-        deletecart,
-        prepareOrder,
-        findid,
-        checkid,
-        reviewwrite,
-        productinfo,
-        checkSession,
-        buy,
-        order,
-        point,
-        usercoupon,
-        transaction,
-        latestorder,
-        searchproduct,
-        confirm,
-        savecart,
-        newproducts,
-        saleproducts,
-        createOrder,
-        deleteAllCartItems,
-        checkUser,
-        sendVerificationCode,
-        resetPassword,
-        getOrderSummary,
-        updateprofile,
-        userinfo,
-        createReview,
-        getProductReviews,
-        getCartCount,
-        getProfile,
-    };
+        res.json({
+            result: true,
+            data: {
+                pending: pendingOrders,
+                inPreparation: 0, // 배송준비중은 비워둡니다.
+                shipping: 0,
+                completed: completedOrders,
+            },
+            completedTransactions: completedTransactions
+        });
+    } catch (error) {
+        console.error('주문 요약 데이터 조회 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+};
+const writecs = async(req,res) =>{
+ try{
+    const {userId,title,content} = req.body
+    const result = await Inquiries.create({
+        UserID:userId,
+        InquiryType:'Shop',
+        Title:title,
+        Content:content,
+        Status:'Pending',
+        CreatedAt: new Date()
+    })
+    res.json({result:true})
+ }catch(error){
+    console.error(' 데이터 조회 오류:', error);
+    res.status(500).json({ result: false, message: '서버 오류' });
+ }
+}
+const inquiries = async(req,res) =>{
+    try{
+        const result = await Inquiries.findAll({
+            attributes: ['InquiryID', 'UserID', 'Title', 'Content', 'Status', 'CreatedAt'],
+            include: [{
+                model: InquiryReplies,  // 답변도 함께 가져오려면
+                attributes: ['ReplyID', 'ReplyContent', 'CreatedAt']
+            }],
+            order: [['CreatedAt', 'DESC']]  // 최신글 순으로 정렬
+        });
+
+        res.json({ 
+            result: true,
+            data: result 
+        });
+    }catch(error){
+        console.error('데이터 조회 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+}
+
+
+module.exports = {
+    signup,
+    login,
+    notice,
+    everydayevent,
+    notices,
+    getChargers,
+    name,
+    chargelist,
+    couponlist,
+    products,
+    orderlist,
+    cart,
+    quantity,
+    deletecart,
+    prepareOrder,
+    findid,
+    checkid,
+    reviewwrite,
+    productinfo,
+    checkSession,
+    buy,
+    order,
+    point,
+    usercoupon,
+    transaction,
+    latestorder,
+    searchproduct,
+    confirm,
+    savecart,
+    newproducts,
+    saleproducts,
+    createOrder,
+    deleteAllCartItems,
+    checkUser,
+    sendVerificationCode,
+    resetPassword,
+    getOrderSummary,
+    updateprofile,
+    userinfo,
+    createReview,
+    getProductReviews,
+    getCartCount,
+    writecs,
+    inquiries,
+  getProfile,
+};
+

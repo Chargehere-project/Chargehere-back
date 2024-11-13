@@ -43,6 +43,9 @@ const {
     createReview,
     getOrderSummary,
     getProfile,
+    writecs,
+    inquiries
+    
 } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
@@ -94,6 +97,7 @@ router.get('/reviews/product/:id',getProductReviews)
 router.post('/cart/count', getCartCount)
 router.put('/user/updateprofile', updateprofile);
 router.get('/user/profile', auth, getProfile);
-
+router.post('/mall/cs',writecs)
+router.get('/inquiries',inquiries)
 
 module.exports = router;

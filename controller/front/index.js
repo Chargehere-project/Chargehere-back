@@ -1,4 +1,4 @@
-const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Coupons, OrderItem } = require('../../models');
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Inquiries,Coupons, OrderItem, InquiryReplies } = require('../../models');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
@@ -341,13 +341,13 @@ const orderlist = async (req, res) => {
                     model: OrderList,
                     where: { 
                         UserID: userId,
-                        OrderStatus: ['Completed', 'Cancelled']
+                        OrderStatus: ['Pending','Completed', 'Cancelled']
                     },
                     attributes: ['OrderDate', 'OrderStatus']
                 },
                 {
                     model: Products,
-                    attributes: ['ProductID', 'ProductName']
+                    attributes: ['ProductID', 'ProductName', 'Image']
                 }
             ],
             order: [[{ model: OrderList }, 'createdAt', 'DESC']]
@@ -1512,6 +1512,43 @@ const getOrderSummary = async (req, res) => {
         res.status(500).json({ result: false, message: '서버 오류' });
     }
 };
+const writecs = async(req,res) =>{
+ try{
+    const {userId,title,content} = req.body
+    const result = await Inquiries.create({
+        UserID:userId,
+        InquiryType:'Shop',
+        Title:title,
+        Content:content,
+        Status:'Pending',
+        CreatedAt: new Date()
+    })
+    res.json({result:true})
+ }catch(error){
+    console.error(' 데이터 조회 오류:', error);
+    res.status(500).json({ result: false, message: '서버 오류' });
+ }
+}
+const inquiries = async(req,res) =>{
+    try{
+        const result = await Inquiries.findAll({
+            attributes: ['InquiryID', 'UserID', 'Title', 'Content', 'Status', 'CreatedAt'],
+            include: [{
+                model: InquiryReplies,  // 답변도 함께 가져오려면
+                attributes: ['ReplyID', 'ReplyContent', 'CreatedAt']
+            }],
+            order: [['CreatedAt', 'DESC']]  // 최신글 순으로 정렬
+        });
+
+        res.json({ 
+            result: true,
+            data: result 
+        });
+    }catch(error){
+        console.error('데이터 조회 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류' });
+    }
+}
 
 
 module.exports = {
@@ -1556,5 +1593,7 @@ module.exports = {
     userinfo,
     createReview,
     getProductReviews,
-    getCartCount
+    getCartCount,
+    writecs,
+    inquiries
 };

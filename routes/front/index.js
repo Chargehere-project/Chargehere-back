@@ -37,6 +37,9 @@ const {
     savecart,
     saleproducts, createReview,
     getOrderSummary,
+    writecs,
+    inquiries
+    
 } = require('../../controller/front');
 const router = express.Router();
 const { auth } = require('../../middleware');
@@ -87,5 +90,7 @@ router.post('/userinfo',userinfo)
 router.post('/reviews',createReview)
 router.get('/reviews/product/:id',getProductReviews)
 router.post('/cart/count', getCartCount)
+router.post('/mall/cs',writecs)
+router.get('/inquiries',inquiries)
 
 module.exports = router;

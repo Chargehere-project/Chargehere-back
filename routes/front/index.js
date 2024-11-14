@@ -21,7 +21,7 @@ const {
     products,
     newproducts,
     orderlist,
-    cart,
+    getcart,
     quantity,
     deletecart,
     order,
@@ -67,7 +67,7 @@ router.post('/name',auth, name)
 router.post('/chargelist', auth, chargelist)
 router.post('/couponlist', auth, couponlist)
 router.post('/orderlist', auth, orderlist)
-router.post('/cart',auth,cart)
+router.post('/cart',auth,getcart)
 router.get('/products', products)
 router.get('/newproducts',newproducts)
 router.get('/saleproducts',saleproducts)

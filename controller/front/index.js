@@ -30,48 +30,58 @@ const login = async (req, res) => {
     try {
         const { id, password } = req.body;
 
+        // 1. 사용자 조회
+        const user = await User.findOne({ where: { LoginID: id } });
 
-            // 비밀번호 검증
-            const isPasswordValid = await bcrypt.compare(password, user.Password);
-
-            if (!isPasswordValid) {
-                return res.status(401).json({ result: false, message: '비밀번호가 틀렸습니다.' });
-            }
-
-            // JWT 토큰 생성
-            const token = jwt.sign(
-                {
-                    UserID: user.UserID,
-                    LoginID: user.LoginID,
-                    UserName: user.Name,
-                },
-                process.env.SECRET,
-                { expiresIn: '24h' }
-            );
-
-            req.session.userDetails = {
-                phoneNumber: user.PhoneNumber,
-                address: user.Address,
-            };
-
-            await new Promise((resolve, reject) => {
-                req.session.save((err) => {
-                    if (err) reject(err);
-                    resolve();
-                });
-            });
-
-            res.json({
-                result: true,
-                code: 100,
-                response: { token },
-                message: '로그인 성공',
-            });
-        } catch (error) {
-            console.error('로그인 중 오류:', error);
-            res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
+        // 2. 사용자 존재 여부 확인
+        if (!user) {
+            return res.status(404).json({ result: false, message: '사용자를 찾을 수 없습니다.' });
         }
-    };
+
+        // 3. 비밀번호 검증
+        const isPasswordValid = await bcrypt.compare(password, user.Password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ result: false, message: '비밀번호가 틀렸습니다.' });
+        }
+
+        // 4. JWT 토큰 생성
+        const token = jwt.sign(
+            {
+                UserID: user.UserID,
+                LoginID: user.LoginID,
+                UserName: user.Name,
+            },
+            process.env.SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // 5. 세션에 사용자 정보 저장
+        req.session.userDetails = {
+            phoneNumber: user.PhoneNumber,
+            address: user.Address,
+        };
+
+        // 세션 저장
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => {
+                if (err) reject(err);
+                resolve();
+            });
+        });
+
+        // 6. 성공 응답
+        res.json({
+            result: true,
+            code: 100,
+            response: { token },
+            message: '로그인 성공',
+        });
+    } catch (error) {
+        console.error('로그인 중 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
+    }
+};
 
     // checkSession 컨트롤러도 수정
     const checkSession = async (req, res) => {
@@ -390,42 +400,19 @@ const login = async (req, res) => {
         }
     };
 
-
-
-
-    const cart = async (req, res) => {
+    const getcart = async (req, res) => {
         try {
             const { userId } = req.body;
-const orderlist = async (req, res) => {
-    try {
-        const { userId } = req.body;
-        console.log('오더리스트 아이디', userId);
-        
-        const orderItems = await OrderItem.findAll({
-            include: [
-                {
-                    model: OrderList,
-                    where: { 
-                        UserID: userId,
-                        OrderStatus: ['Pending','Completed', 'Cancelled']
-                    },
-                    attributes: ['OrderDate', 'OrderStatus']
-                },
-                {
-                    model: Products,
-                    attributes: ['ProductID', 'ProductName', 'Image']
-                }
-            ],
-            order: [[{ model: OrderList }, 'createdAt', 'DESC']]
-        });
-
+    
+            // userId 유효성 검사
             if (!userId) {
                 return res.status(400).json({
                     result: false,
                     message: 'userId가 필요합니다.',
                 });
             }
-
+    
+            // 장바구니 데이터 조회
             const cartItems = await Cart.findAll({
                 where: {
                     UserID: userId,
@@ -433,28 +420,34 @@ const orderlist = async (req, res) => {
                 include: [
                     {
                         model: Products,
-                        attributes: ['ProductID', 'ProductName', 'Image', 'Price'], // 'Price' 추가
-                        required: false,
+                        attributes: ['ProductID', 'ProductName', 'Image', 'Price'], // 필요한 필드만 선택
                     },
                 ],
             });
-
-            // 조회 결과 로그
-            console.log('조회된 장바구니:', cartItems);
-
+    
+            // 장바구니가 비어 있는 경우
+            if (cartItems.length === 0) {
+                return res.status(404).json({
+                    result: false,
+                    message: '장바구니가 비어 있습니다.',
+                });
+            }
+    
+            // 성공적인 응답 반환
             res.json({
                 result: true,
                 data: cartItems,
             });
         } catch (error) {
-            console.error('장바구니 조회 오류:', error);
+            console.error('장바구니 데이터 조회 오류:', error);
             res.status(500).json({
                 result: false,
-                message: '장바구니 조회 실패',
-                error: error.message, // 에러 메시지 추가
+                message: '서버 오류가 발생했습니다.',
             });
         }
     };
+
+
 
     const quantity = async (req, res) => {
         try {
@@ -1553,21 +1546,6 @@ const orderlist = async (req, res) => {
 
 
 
-        res.json({
-            result: true,
-            data: {
-                pending: pendingOrders,
-                inPreparation: 0, // 배송준비중은 비워둡니다.
-                shipping: 0,
-                completed: completedOrders,
-            },
-            completedTransactions: completedTransactions
-        });
-    } catch (error) {
-        console.error('주문 요약 데이터 조회 오류:', error);
-        res.status(500).json({ result: false, message: '서버 오류' });
-    }
-};
 const writecs = async(req,res) =>{
  try{
     const {userId,title,content} = req.body
@@ -1728,7 +1706,7 @@ module.exports = {
     couponlist,
     products,
     orderlist,
-    cart,
+    getcart,
     quantity,
     deletecart,
     prepareOrder,
@@ -1764,7 +1742,7 @@ module.exports = {
     writecs,
     inquiries,
     inquiryDetail,
-    countqna
-  getProfile,
+    countqna,
+    getProfile
 };
 

@@ -1483,30 +1483,30 @@ const login = async (req, res) => {
             const { userId } = req.body;
 
             // OrderStatus가 'Pending'인 주문 수 확인
-            const pendingOrders = await OrderList.count({
-                where: { UserID: userId, OrderStatus: 'Pending' }
-            });
-            console.log('입금대기중 (Pending) 주문 수:', pendingOrders);
-
-            // Transactions 테이블에서 Status가 'Completed'인 결제완료 수 확인
-            const completedTransactions = await Transactions.count({
-                where: { UserID: userId, Status: 'Completed' }
-            });
-            console.log('결제완료 (Completed) 거래 수:', completedTransactions);
-
-            // OrderStatus가 'Completed'인 주문 수 확인
-            const completedOrders = await OrderList.count({
+            const CompletedOrders = await OrderList.count({
                 where: { UserID: userId, OrderStatus: 'Completed' }
             });
-            console.log('배송완료 (Completed) 주문 수:', completedOrders);
+            console.log('결제완료 주문 수:', CompletedOrders);
+
+            // Transactions 테이블에서 Status가 'Completed'인 결제완료 수 확인
+            const ShippingdOrders = await OrderList.count({
+                where: { UserID: userId, Status: 'Shipping' }
+            });
+            console.log('배송중 거래 수:', ShippingdOrders);
+
+            // OrderStatus가 'Completed'인 주문 수 확인
+            const DeliveryCompletedOrders = await OrderList.count({
+                where: { UserID: userId, OrderStatus: 'DeliveryCompleted' }
+            });
+            console.log('배송완료 주문 수:', DeliveryCompletedOrders);
 
             res.json({
                 result: true,
                 data: {
-                    pending: pendingOrders,
+                    completed: CompletedOrders,
                     inPreparation: 0, // 배송준비중은 비워둡니다.
-                    shipping: 0,
-                    completed: completedOrders,
+                    shipping: ShippingdOrders,
+                    DeliveryCompleted: DeliveryCompletedOrders,
                 },
                 completedTransactions: completedTransactions
             });
@@ -1544,7 +1544,24 @@ const login = async (req, res) => {
         }
     };
 
+    const verifyToken = async (req, res) => {
+        try {
+            const {userId} = req.body
 
+            const result = await User.findOne({
+                where: { UserID: userId },
+            })
+            res.json({
+                result: true,
+            })
+        } catch (error) {
+            console.error('토큰 검증 오류:', error);
+            res.status(401).json({ 
+                result: false, 
+                message: '유효하지 않은 토큰입니다.' 
+            });
+        }
+    };
 
 const writecs = async(req,res) =>{
  try{
@@ -1720,6 +1737,7 @@ module.exports = {
     point,
     usercoupon,
     transaction,
+    verifyToken,
     latestorder,
     searchproduct,
     confirm,

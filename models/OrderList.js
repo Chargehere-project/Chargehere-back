@@ -24,7 +24,7 @@ module.exports = (seq, DataTypes) => {
                 allowNull: false,
             },
             OrderStatus: {
-                type: DataTypes.ENUM('Pending', 'Completed', 'Shipping','Cancelled'),
+                type: DataTypes.ENUM('Pending', 'Completed','DeliveryCompleted' ,'Shipping','Cancelled'),
                 allowNull: false,
                 defaultValue: 'Pending',
             },

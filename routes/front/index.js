@@ -48,7 +48,8 @@ const {
     inquiries,
     qas,
     inquiryDetail,
-    countqna
+    countqna,
+    verifyToken
     
 } = require('../../controller/front');
 const router = express.Router();
@@ -101,6 +102,7 @@ router.get('/reviews/product/:id',getProductReviews)
 router.post('/cart/count', getCartCount)
 router.put('/user/updateprofile', updateprofile);
 router.get('/user/profile', auth, getProfile);
+router.post('/auth/verify', verifyToken);
 router.post('/mall/cs',writecs)
 router.get('/inquiries',inquiries)
 router.get('/inquiry/:id',inquiryDetail)

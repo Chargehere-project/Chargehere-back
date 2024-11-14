@@ -147,52 +147,74 @@ const getReply = async (req, res) => {
 };
 
 // 문의 검색 기능
-// 문의 검색 기능
 const searchInquiries = async (req, res) => {
-    const { searchType, searchValue, inquiryType, status, startDate, endDate } = req.query;
+    const { searchType, searchValue, inquiryType, status, startDate, endDate, page = 1, limit = 10 } = req.query;
 
-    let whereCondition = {};
-    let userCondition = {};
+    let whereCondition = {}; // Inquiries 모델 조건
+    let userCondition = {}; // User 모델 조건
+
+    // 입력된 searchType과 searchValue 값 확인
+    console.log('Received searchType:', searchType);
+    console.log('Received searchValue:', searchValue);
 
     // 검색 조건 처리
     if (searchType && searchValue) {
-        if (searchType === 'LoginID') {
-            // LoginID 문자열 검색 조건 추가 (User 모델의 필드)
+        if (searchType === 'UserId') {
             userCondition.LoginID = { [Op.like]: `%${searchValue}%` };
-        } else {
-            // Inquiries 모델의 다른 필드 (예: Title, Content 등) 검색
-            whereCondition[searchType] = { [Op.like]: `%${searchValue}%` };
+            console.log('User ID filter applied:', userCondition.LoginID);
+        } else if (searchType === 'Content') {
+            whereCondition.Content = { [Op.like]: `%${searchValue}%` };
+            console.log('Content filter applied:', whereCondition.Content);
         }
+    } else {
+        console.log('No searchType or searchValue provided.');
     }
 
     if (inquiryType) {
-        whereCondition.InquiryType = inquiryType; // 문의 유형 검색 (EV, Shop 등)
+        whereCondition.InquiryType = inquiryType;
+        console.log('Inquiry type filter applied:', whereCondition.InquiryType);
     }
 
     if (status) {
-        whereCondition.Status = status; // 문의 상태 검색 (Pending, Answered 등)
+        whereCondition.Status = status;
+        console.log('Status filter applied:', whereCondition.Status);
     }
 
     if (startDate && endDate) {
-        whereCondition.CreatedAt = { [Op.between]: [new Date(startDate), new Date(endDate)] }; // 작성 날짜 검색
+        whereCondition.CreatedAt = { [Op.between]: [new Date(startDate), new Date(endDate)] };
+        console.log('Date range filter applied:', whereCondition.CreatedAt);
     }
 
+    // 최종 필터 조건 확인
+    console.log('Final Inquiries filter condition:', whereCondition);
+    console.log('Final User filter condition:', userCondition);
+
     try {
-        const inquiries = await Inquiries.findAll({
+        // 페이지네이션을 위한 limit와 offset 계산
+        const offset = (page - 1) * limit;
+
+        // 검색 및 페이지네이션 적용
+        const { rows: inquiries, count: totalItems } = await Inquiries.findAndCountAll({
             where: whereCondition,
             include: [
                 {
                     model: User,
                     attributes: ['LoginID'],
-                    where: userCondition, // User 모델의 LoginID 조건 추가
+                    where: userCondition, // User 모델의 LoginID 조건 적용
                 },
             ],
+            limit: parseInt(limit), // 한 페이지당 항목 수
+            offset: parseInt(offset), // 시작 위치
         });
-        res.json(inquiries);
+
+        console.log('Filtered inquiries:', inquiries);
+        res.json({ inquiries, totalItems, totalPages: Math.ceil(totalItems / limit), currentPage: parseInt(page) });
     } catch (error) {
-        res.status(500).json({ message: '문의 검색 실패' });
+        console.error('Inquiry search failed:', error);
+        res.status(500).json({ message: 'Inquiry search failed' });
     }
 };
+
 
 module.exports = {
     getInquiries,

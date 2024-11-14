@@ -27,7 +27,16 @@ const getReviews = async (req, res) => {
         // 리뷰 데이터를 서울 시간대에 맞게 포맷팅
         const formattedReviews = rows.map((review) => ({
             ...review.toJSON(),
-            ReviewDate: moment(review.ReviewDate).tz('Asia/Seoul').format('YYYY-MM-DD HH:mm:ss'), // 서울 시간 기준
+            ReviewDate: new Date(review.ReviewDate).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false, // 24시간 형식 사용
+                timeZone: 'Asia/Seoul',
+            }), // 서울 시간 기준
         }));
 
         // 페이지 수 계산
@@ -235,7 +244,7 @@ const searchReviews = async (req, res) => {
         if (searchType === 'ReviewID') {
             whereCondition.ReviewID = { [Op.like]: `%${query}%` };
         } else if (searchType === 'UserID') {
-            whereCondition.UserID = { [Op.like]: `%${query}%` };
+            whereCondition.LoginID = { [Op.like]: `%${query}%` };
         } else if (searchType === 'Content') {
             whereCondition.Content = { [Op.like]: `%${query}%` };
         }

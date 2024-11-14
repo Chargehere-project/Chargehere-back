@@ -168,7 +168,7 @@ const login = async (req, res) => {
                 ChargeDate: new Date(),
                 ChargeType: 'Earned',
                 Amount: points,
-                Description: '출석이벤트',
+                Description: '출석이벤트로 인한 적립',
             });
 
             user.Points += points;
@@ -347,7 +347,7 @@ const login = async (req, res) => {
                         model: OrderList,
                         where: { 
                             UserID: userId,
-                            OrderStatus: ['Completed', 'Cancelled']
+
                         },
                         attributes: ['OrderDate', 'OrderStatus']
                     },
@@ -937,7 +937,7 @@ const login = async (req, res) => {
             // 주문 상태 업데이트
             await OrderList.update(
                 { 
-                    Status: 'PAID',
+                    OrderStatus: 'Completed',
                     CustomerName: recipientInfo.name,
                     CustomerPhoneNumber: recipientInfo.phone,
                     CustomerAddress: recipientInfo.address
@@ -1478,37 +1478,33 @@ const login = async (req, res) => {
     };
 
 
-    const getOrderSummary = async (req, res) => {
+    const getOrderSummary = async (req, res) => {   
         try {
             const { userId } = req.body;
-
-            // OrderStatus가 'Pending'인 주문 수 확인
+    
+            // OrderStatus가 'Completed'인 주문 수 확인
             const CompletedOrders = await OrderList.count({
                 where: { UserID: userId, OrderStatus: 'Completed' }
             });
-            console.log('결제완료 주문 수:', CompletedOrders);
-
-            // Transactions 테이블에서 Status가 'Completed'인 결제완료 수 확인
+    
+            // OrderStatus가 'Shipping'인 주문 수 확인 ('Status' 대신 'OrderStatus' 사용)
             const ShippingdOrders = await OrderList.count({
-                where: { UserID: userId, Status: 'Shipping' }
+                where: { UserID: userId, OrderStatus: 'Shipping' }  // Status -> OrderStatus로 수정
             });
-            console.log('배송중 거래 수:', ShippingdOrders);
-
-            // OrderStatus가 'Completed'인 주문 수 확인
+    
+            // OrderStatus가 'DeliveryCompleted'인 주문 수 확인
             const DeliveryCompletedOrders = await OrderList.count({
                 where: { UserID: userId, OrderStatus: 'DeliveryCompleted' }
             });
-            console.log('배송완료 주문 수:', DeliveryCompletedOrders);
-
+            
+    
             res.json({
                 result: true,
                 data: {
                     completed: CompletedOrders,
-                    inPreparation: 0, // 배송준비중은 비워둡니다.
                     shipping: ShippingdOrders,
                     DeliveryCompleted: DeliveryCompletedOrders,
-                },
-                completedTransactions: completedTransactions
+                }
             });
         } catch (error) {
             console.error('주문 요약 데이터 조회 오류:', error);

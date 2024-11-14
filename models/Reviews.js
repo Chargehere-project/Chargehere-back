@@ -36,7 +36,7 @@ module.exports = (seq, DataTypes) => {
                 allowNull: true,
             },
             Status: {
-                type: DataTypes.ENUM('visible', 'hidden'), 
+                type: DataTypes.ENUM('visible', 'hidden', 'deleted'), 
                 allowNull: false,
                 defaultValue: 'visible', 
             },

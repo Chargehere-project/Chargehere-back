@@ -93,43 +93,85 @@ const cancelPoints = async (req, res) => {
 };
 
 
-// 포인트 검색 기능
 const searchPoints = async (req, res) => {
-    const { loginID, chargeType, startDate, endDate } = req.query;
+    const { loginID, chargeType, startDate, endDate, page = 1, limit = 10 } = req.query;
 
+    const offset = (page - 1) * limit;
     let whereCondition = {};
 
-    // LoginID로 검색할 경우 User 테이블에서 UserID를 조회하여 필터링
+    console.log('Received query parameters:', { loginID, chargeType, startDate, endDate, page, limit });
+
+    // 부분 일치 검색을 위해 LIKE 연산자 사용
     if (loginID) {
-        const user = await User.findOne({ where: { LoginID: loginID } });
-        if (user) {
-            whereCondition.UserID = user.UserID; // UserID로 필터링
-        } else {
-            return res.json([]); // 유저가 없으면 빈 배열 반환
+        try {
+            const users = await User.findAll({
+                where: { LoginID: { [Op.like]: `%${loginID}%` } },
+                attributes: ['UserID'],
+            });
+
+            if (users.length > 0) {
+                whereCondition.UserID = users.map((user) => user.UserID);
+                console.log(
+                    'User(s) found:',
+                    users.map((user) => user.UserID)
+                );
+            } else {
+                console.log('No user found with the provided LoginID');
+                return res.json({ points: [], totalItems: 0, totalPages: 0 }); // 빈 배열, totalItems = 0, totalPages = 0 반환
+            }
+        } catch (error) {
+            console.error('Error finding user by LoginID:', error);
+            return res.status(500).json({ message: 'Error finding user by LoginID' });
         }
     }
 
     if (chargeType) {
         whereCondition.ChargeType = chargeType;
+        console.log('ChargeType filter applied:', chargeType);
     }
 
     if (startDate && endDate) {
         whereCondition.ChargeDate = {
             [Op.between]: [new Date(startDate), new Date(endDate)],
         };
+        console.log('Date range filter applied:', { startDate, endDate });
     }
 
+    console.log('Final whereCondition:', whereCondition);
+
     try {
+        // 전체 포인트 항목 수를 계산하여 totalItems와 totalPages를 얻기 위해 count() 사용
+        const totalItems = await Points.count({
+            where: whereCondition,
+            include: [{ model: User, attributes: ['LoginID'], as: 'PointUser' }],
+        });
+
+        // 페이지네이션 적용된 포인트 내역 가져오기
         const points = await Points.findAll({
             where: whereCondition,
-            include: [{ model: User, attributes: ['LoginID'], as: 'PointUser' }], // User alias 포함
+            include: [{ model: User, attributes: ['LoginID'], as: 'PointUser' }],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
         });
-        res.json(points);
+
+        const totalPages = Math.ceil(totalItems / limit);
+
+        console.log('Points found:', points.length, 'records');
+
+        res.json({
+            points,
+            totalItems,
+            totalPages,
+            currentPage: parseInt(page),
+        }); // 응답에 totalItems, totalPages, currentPage 추가
     } catch (error) {
         console.error('포인트 검색 실패:', error);
         res.status(500).json({ message: '포인트 검색 실패' });
     }
 };
+
+
+
 
 // 포인트 총 개수 가져오기
 const getTotalPointsCount = async (req, res) => {

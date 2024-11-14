@@ -53,27 +53,31 @@ const searchUsers = async (req, res) => {
 // 유저 전체 목록 가져오기 (페이지네이션 추가)
 const getAllUsers = async (req, res) => {
     const { page = 1, limit = 10 } = req.query; // 기본값: 1페이지, 10개 항목
-    const offset = (page - 1) * limit;
+
+    // limit가 "all"로 설정된 경우 모든 유저를 가져오기 위해 limit과 offset을 무시합니다.
+    const offset = limit === 'all' ? 0 : (page - 1) * limit;
+    const actualLimit = limit === 'all' ? null : parseInt(limit); // "all"이면 제한 없음
 
     try {
         const { count, rows } = await User.findAndCountAll({
-            order: [['createdAt', 'DESC']], // 최신순 정렬
-            limit: parseInt(limit), // 페이지당 항목 수
-            offset: parseInt(offset), // 시작 인덱스
             order: [['UserID', 'DESC']], // 최신순 정렬
+            limit: actualLimit, // 페이지당 항목 수 또는 모든 유저
+            offset, // 시작 인덱스
         });
 
-        const totalPages = Math.ceil(count / limit);
+        const totalPages = limit === 'all' ? 1 : Math.ceil(count / limit); // 모든 유저를 불러오면 페이지 수는 1
 
         res.json({
-            users: rows, // 현재 페이지의 유저 목록
+            users: rows, // 현재 페이지의 유저 목록 또는 전체 유저
             totalPages, // 전체 페이지 수
             currentPage: parseInt(page), // 현재 페이지
         });
     } catch (error) {
+        console.error('유저 목록 가져오기 실패:', error);
         res.status(500).json({ message: '유저 목록 가져오기 실패', error });
     }
 };
+
 
 // 유저 상태 업데이트
 const updateUserStatus = async (req, res) => {

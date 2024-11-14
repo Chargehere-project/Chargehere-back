@@ -30,48 +30,58 @@ const login = async (req, res) => {
     try {
         const { id, password } = req.body;
 
+        // 1. 사용자 조회
+        const user = await User.findOne({ where: { LoginID: id } });
 
-            // 비밀번호 검증
-            const isPasswordValid = await bcrypt.compare(password, user.Password);
-
-            if (!isPasswordValid) {
-                return res.status(401).json({ result: false, message: '비밀번호가 틀렸습니다.' });
-            }
-
-            // JWT 토큰 생성
-            const token = jwt.sign(
-                {
-                    UserID: user.UserID,
-                    LoginID: user.LoginID,
-                    UserName: user.Name,
-                },
-                process.env.SECRET,
-                { expiresIn: '24h' }
-            );
-
-            req.session.userDetails = {
-                phoneNumber: user.PhoneNumber,
-                address: user.Address,
-            };
-
-            await new Promise((resolve, reject) => {
-                req.session.save((err) => {
-                    if (err) reject(err);
-                    resolve();
-                });
-            });
-
-            res.json({
-                result: true,
-                code: 100,
-                response: { token },
-                message: '로그인 성공',
-            });
-        } catch (error) {
-            console.error('로그인 중 오류:', error);
-            res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
+        // 2. 사용자 존재 여부 확인
+        if (!user) {
+            return res.status(404).json({ result: false, message: '사용자를 찾을 수 없습니다.' });
         }
-    };
+
+        // 3. 비밀번호 검증
+        const isPasswordValid = await bcrypt.compare(password, user.Password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ result: false, message: '비밀번호가 틀렸습니다.' });
+        }
+
+        // 4. JWT 토큰 생성
+        const token = jwt.sign(
+            {
+                UserID: user.UserID,
+                LoginID: user.LoginID,
+                UserName: user.Name,
+            },
+            process.env.SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // 5. 세션에 사용자 정보 저장
+        req.session.userDetails = {
+            phoneNumber: user.PhoneNumber,
+            address: user.Address,
+        };
+
+        // 세션 저장
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => {
+                if (err) reject(err);
+                resolve();
+            });
+        });
+
+        // 6. 성공 응답
+        res.json({
+            result: true,
+            code: 100,
+            response: { token },
+            message: '로그인 성공',
+        });
+    } catch (error) {
+        console.error('로그인 중 오류:', error);
+        res.status(500).json({ result: false, message: '서버 오류가 발생했습니다.' });
+    }
+};
 
     // checkSession 컨트롤러도 수정
     const checkSession = async (req, res) => {

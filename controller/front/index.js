@@ -1,5 +1,6 @@
 
-const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, Inquiries,Coupons, OrderItem, InquiryReplies } = require('../../models');
+const { User, Notice, Points, UserCoupon, Products, OrderList, Cart, Reviews,Transactions, QnA, QnAReplies, Inquiries,Coupons, OrderItem, InquiryReplies } = require('../../models');
+
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { where } = require('sequelize');
@@ -1604,7 +1605,116 @@ const inquiries = async(req,res) =>{
         res.status(500).json({ result: false, message: '서버 오류' });
     }
 }
+const inquiryDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
 
+        if (!id) {
+            return res.status(400).json({
+                result: false,
+                message: '문의 ID가 필요합니다.'
+            });
+        }
+
+        const result = await Inquiries.findOne({
+            where: {
+                InquiryID: id
+            },
+            include: [{
+                model: InquiryReplies,
+                attributes: ['ReplyID', 'ReplyContent', 'CreatedAt'],
+                required: false  // 답변이 없어도 문의글은 조회되도록 LEFT JOIN 설정
+            }],
+            attributes: [
+                'InquiryID',
+                'UserID',
+                'Title',
+                'Content',
+                'Status',
+                'CreatedAt'
+            ]
+        });
+
+        if (!result) {
+            return res.status(404).json({
+                result: false,
+                message: '해당 문의를 찾을 수 없습니다.'
+            });
+        }
+
+        res.json({
+            result: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error('문의 상세 조회 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '서버 오류'
+        });
+    }
+};
+const qas = async(req,res) =>{
+    try{
+        const {userId, productId, question ,title} = req.body
+        const result = await QnA.create({
+            ProductID:productId,
+            UserID:userId,
+            Title:title,
+            Content:question,
+            Status: 'Pending',
+            CreatedAt: new Date(),
+        })
+        res.json({result:true})
+    }catch(error){
+        console.error('qna 조회 오류:',error)
+        res.status(500).json({
+            result:false,
+            message:'서버 오류'
+        })
+    }
+};
+const findqas = async(req,res) =>{
+    try {
+        const productId = req.params.productId;
+
+        // Sequelize 모델을 사용하여 데이터 조회
+        const qas = await QnA.findAll({
+            where: { ProductID: productId },
+            include: [{
+                model: QnAReplies,  // 답변 모델이 있다면
+                attributes: ['ReplyContent', 'CreatedAt'],
+                required: false  // LEFT JOIN
+            }],
+            order: [['CreatedAt', 'DESC']]  // 최신순 정렬
+        });
+
+        res.json({
+            result: true,
+            data: qas
+        });
+
+    } catch (error) {
+        console.error('QA 조회 오류:', error);
+        res.status(500).json({
+            result: false,
+            message: '서버 오류'
+        });
+    }
+}
+const countqna = async(req,res) =>{
+    const { productId } = req.query;
+
+    try {
+        const count = await QnA.count({
+            where: { ProductID: productId },
+        }); // MongoDB 예시
+        res.json({ count });
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching Q&A count' });
+    }
+}
 
 module.exports = {
     signup,
@@ -1640,17 +1750,21 @@ module.exports = {
     saleproducts,
     createOrder,
     deleteAllCartItems,
+    qas,
     checkUser,
     sendVerificationCode,
     resetPassword,
     getOrderSummary,
     updateprofile,
+    findqas,
     userinfo,
     createReview,
     getProductReviews,
     getCartCount,
     writecs,
     inquiries,
+    inquiryDetail,
+    countqna
   getProfile,
 };
 

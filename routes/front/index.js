@@ -38,13 +38,17 @@ const {
     searchproduct,
     confirm,
     createOrder,
+    findqas,
     savecart,
     saleproducts,
     createReview,
     getOrderSummary,
     getProfile,
     writecs,
-    inquiries
+    inquiries,
+    qas,
+    inquiryDetail,
+    countqna
     
 } = require('../../controller/front');
 const router = express.Router();
@@ -99,5 +103,8 @@ router.put('/user/updateprofile', updateprofile);
 router.get('/user/profile', auth, getProfile);
 router.post('/mall/cs',writecs)
 router.get('/inquiries',inquiries)
-
+router.get('/inquiry/:id',inquiryDetail)
+router.post('/qas',qas)
+router.get('/qas/product/:productId',findqas)
+router.get('/qas/count',countqna)
 module.exports = router;

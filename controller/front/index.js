@@ -390,42 +390,19 @@ const login = async (req, res) => {
         }
     };
 
-
-
-
-    const cart = async (req, res) => {
+    const getcart = async (req, res) => {
         try {
             const { userId } = req.body;
-const orderlist = async (req, res) => {
-    try {
-        const { userId } = req.body;
-        console.log('오더리스트 아이디', userId);
-        
-        const orderItems = await OrderItem.findAll({
-            include: [
-                {
-                    model: OrderList,
-                    where: { 
-                        UserID: userId,
-                        OrderStatus: ['Pending','Completed', 'Cancelled']
-                    },
-                    attributes: ['OrderDate', 'OrderStatus']
-                },
-                {
-                    model: Products,
-                    attributes: ['ProductID', 'ProductName', 'Image']
-                }
-            ],
-            order: [[{ model: OrderList }, 'createdAt', 'DESC']]
-        });
-
+    
+            // userId 유효성 검사
             if (!userId) {
                 return res.status(400).json({
                     result: false,
                     message: 'userId가 필요합니다.',
                 });
             }
-
+    
+            // 장바구니 데이터 조회
             const cartItems = await Cart.findAll({
                 where: {
                     UserID: userId,
@@ -433,28 +410,34 @@ const orderlist = async (req, res) => {
                 include: [
                     {
                         model: Products,
-                        attributes: ['ProductID', 'ProductName', 'Image', 'Price'], // 'Price' 추가
-                        required: false,
+                        attributes: ['ProductID', 'ProductName', 'Image', 'Price'], // 필요한 필드만 선택
                     },
                 ],
             });
-
-            // 조회 결과 로그
-            console.log('조회된 장바구니:', cartItems);
-
+    
+            // 장바구니가 비어 있는 경우
+            if (cartItems.length === 0) {
+                return res.status(404).json({
+                    result: false,
+                    message: '장바구니가 비어 있습니다.',
+                });
+            }
+    
+            // 성공적인 응답 반환
             res.json({
                 result: true,
                 data: cartItems,
             });
         } catch (error) {
-            console.error('장바구니 조회 오류:', error);
+            console.error('장바구니 데이터 조회 오류:', error);
             res.status(500).json({
                 result: false,
-                message: '장바구니 조회 실패',
-                error: error.message, // 에러 메시지 추가
+                message: '서버 오류가 발생했습니다.',
             });
         }
     };
+
+
 
     const quantity = async (req, res) => {
         try {
@@ -1553,21 +1536,6 @@ const orderlist = async (req, res) => {
 
 
 
-        res.json({
-            result: true,
-            data: {
-                pending: pendingOrders,
-                inPreparation: 0, // 배송준비중은 비워둡니다.
-                shipping: 0,
-                completed: completedOrders,
-            },
-            completedTransactions: completedTransactions
-        });
-    } catch (error) {
-        console.error('주문 요약 데이터 조회 오류:', error);
-        res.status(500).json({ result: false, message: '서버 오류' });
-    }
-};
 const writecs = async(req,res) =>{
  try{
     const {userId,title,content} = req.body
@@ -1728,7 +1696,7 @@ module.exports = {
     couponlist,
     products,
     orderlist,
-    cart,
+    getcart,
     quantity,
     deletecart,
     prepareOrder,
@@ -1764,7 +1732,7 @@ module.exports = {
     writecs,
     inquiries,
     inquiryDetail,
-    countqna
-  getProfile,
+    countqna,
+    getProfile
 };
 

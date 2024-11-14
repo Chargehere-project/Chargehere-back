@@ -34,11 +34,15 @@ const {
     searchproduct,
     confirm,
     createOrder,
+    findqas,
     savecart,
     saleproducts, createReview,
     getOrderSummary,
     writecs,
-    inquiries
+    inquiries,
+    qas,
+    inquiryDetail,
+    countqna
     
 } = require('../../controller/front');
 const router = express.Router();
@@ -92,5 +96,8 @@ router.get('/reviews/product/:id',getProductReviews)
 router.post('/cart/count', getCartCount)
 router.post('/mall/cs',writecs)
 router.get('/inquiries',inquiries)
-
+router.get('/inquiry/:id',inquiryDetail)
+router.post('/qas',qas)
+router.get('/qas/product/:productId',findqas)
+router.get('/qas/count',countqna)
 module.exports = router;

@@ -237,16 +237,22 @@ const searchReviews = async (req, res) => {
     const { searchType, query, status, startDate, endDate, page = 1, limit = 10 } = req.query;
 
     let whereCondition = {};
+    let includeOptions = [
+        { model: User, attributes: ['LoginID'] },
+        { model: Products, attributes: ['ProductName'] },
+    ];
+
     console.log('Received search parameters:', req.query); // 디버깅용
 
     // 검색 유형에 따라 검색 조건 추가 (리뷰 ID, 회원 ID, 리뷰 내용 등)
     if (searchType && query) {
         if (searchType === 'ReviewID') {
             whereCondition.ReviewID = { [Op.like]: `%${query}%` };
-        } else if (searchType === 'UserID') {
-            whereCondition.LoginID = { [Op.like]: `%${query}%` };
         } else if (searchType === 'Content') {
             whereCondition.Content = { [Op.like]: `%${query}%` };
+        } else if (searchType === 'UserID') {
+            // User 테이블의 LoginID를 조건으로 추가
+            includeOptions[0].where = { LoginID: { [Op.like]: `%${query}%` } };
         }
         console.log('Applied search type and value:', { searchType, query, whereCondition }); // 디버깅용
     }
@@ -270,10 +276,7 @@ const searchReviews = async (req, res) => {
     try {
         const { count, rows } = await Reviews.findAndCountAll({
             where: whereCondition,
-            include: [
-                { model: User, attributes: ['LoginID'] },
-                { model: Products, attributes: ['ProductName'] },
-            ],
+            include: includeOptions,
             limit: parseInt(limit),
             offset: parseInt(offset),
             order: [['ReviewDate', 'DESC']],
@@ -293,6 +296,7 @@ const searchReviews = async (req, res) => {
         res.status(500).json({ message: '리뷰 검색 실패', error });
     }
 };
+
 
 module.exports = {
     getReviews,

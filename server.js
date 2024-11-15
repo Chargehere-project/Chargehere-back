@@ -13,13 +13,14 @@ const PORT = 8000;
 // CORS 설정
 app.use(
     cors({
-        origin: 'http://localhost:3000',
+        origin: ['http://localhost:3000', 'http://localhost:3001'], // 3000번과 3001번 모두 허용
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         exposedHeaders: ['Set-Cookie'],
     })
 );
+
 
 //세션 정
 app.use(

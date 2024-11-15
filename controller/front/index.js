@@ -347,9 +347,11 @@ const login = async (req, res) => {
                         model: OrderList,
                         where: { 
                             UserID: userId,
-
+                            OrderStatus: {
+                                [Op.ne]: 'Pending'  // Pending이 아닌 상태만 조회
+                            }
                         },
-                        attributes: ['OrderDate', 'OrderStatus']
+                        attributes: ['OrderListID','OrderDate', 'OrderStatus']
                     },
                     {
                         model: Products,
@@ -371,6 +373,7 @@ const login = async (req, res) => {
                 const item = orderItem.toJSON();
                 return {
                     OrderID: item.OrderListID,
+                    OrderListID: item.OrderList.OrderListID,  // 이 줄 추가
                     Product: {
                         ProductID: item.Product.ProductID,
                         ProductName: item.Product.ProductName
@@ -379,11 +382,9 @@ const login = async (req, res) => {
                     Amount: item.Price * item.Quantity,
                     OrderDate: item.OrderList.OrderDate,
                     OrderStatus: item.OrderList.OrderStatus,
-                    // OrderListID로 리뷰 존재 여부 확인
                     hasReview: reviews.some(review => review.OrderListID === item.OrderListID)
                 };
             });
-
             res.json({
                 result: true,
                 data: orderItemsWithReviewStatus
@@ -674,40 +675,47 @@ const login = async (req, res) => {
         try {
             // 요청된 데이터 확인
             console.log('리뷰쓰기 요청 데이터:', req.body);
-
+    
             const { userId, productId, rating, content, orderId } = req.body;
+            
+            console.log('받은 orderId:', orderId);  // orderId 값 확인
+    
             if (!userId || !productId || !rating || !content || !orderId) {
-                console.error('필수 데이터가 누락되었습니다:', req.body);
+                console.error('필수 데이터가 누락되었습니다:', {
+                    userId: !!userId,
+                    productId: !!productId,
+                    rating: !!rating,
+                    content: !!content,
+                    orderId: !!orderId
+                });
                 return res.status(400).json({ result: false, message: '필수 데이터가 누락되었습니다.' });
             }
-
-            // 리뷰 데이터 확인
+    
             const reviewData = {
                 UserID: userId,
-                ProductID: productId,
-                Rating: rating,
+                ProductID: parseInt(productId),
+                Rating: parseInt(rating),
                 Content: content,
                 ReviewDate: new Date(),
+                OrderListID: parseInt(orderId)  // OrderListID 추가
             };
-
-            console.log('리뷰 작성 데이터:', reviewData); // 삽입할 데이터 확인
-
-            // 데이터베이스에 리뷰 삽입
+    
+            console.log('저장할 리뷰 데이터:', reviewData);
+    
             const find = await Reviews.create(reviewData);
-
-            // 성공적인 삽입 확인
-            console.log('리뷰 작성 완료:', find);
-
+            console.log('리뷰 작성 완료:', find.toJSON());
+    
             res.json({ result: true, message: '리뷰작성완료' });
         } catch (error) {
-            // 오류 발생 시 에러 로그
             console.error('리뷰 작성 오류:', error);
-
-            // 에러를 클라이언트에 전달
-            res.status(500).json({ result: false, message: '서버오류', error: error.message });
+            res.status(500).json({ 
+                result: false, 
+                message: '서버오류', 
+                error: error.message,
+                details: error.errors?.map(e => e.message)
+            });
         }
     };
-
 
     const productinfo = async (req, res) => {
         try {

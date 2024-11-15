@@ -1805,6 +1805,7 @@ module.exports = {
     inquiries,
     inquiryDetail,
     countqna,
-    getProfile
+    getProfile,
+    button
 };
 

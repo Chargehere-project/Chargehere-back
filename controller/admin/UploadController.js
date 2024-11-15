@@ -43,7 +43,7 @@ const uploadBanner = async (req, res) => {
 // S3에서 최신 배너 가져오기
 const getBanners = async (req, res) => {
     const { category, index } = req.query;
-    const folder = `${category}/banner${index + 1}`; // category와 index로 폴더 경로 설정
+    const folder = `${category}/banner${index === '0' ? '01' : '11'}`; // category와 index로 폴더 경로 설정
 
     const params = {
         Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -63,6 +63,7 @@ const getBanners = async (req, res) => {
         res.status(500).json({ error: 'Error fetching banners from S3' });
     }
 };
+
 
 
 const uploadFile = async (req, res, category) => {

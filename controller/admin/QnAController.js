@@ -33,6 +33,7 @@ const getQnAs = async (req, res) => {
 // 특정 QnA 답변 가져오기
 const getQnAReply = async (req, res) => {
     const { qnaId } = req.params;
+    console.log(`Received request for QnA ID: ${qnaId}`); // 요청 로그
 
     try {
         const reply = await QnAReplies.findOne({ where: { QnAID: qnaId } });
@@ -45,6 +46,7 @@ const getQnAReply = async (req, res) => {
         res.status(500).json({ message: '답변 조회 실패' });
     }
 };
+
 
 // QnA 답변 추가 또는 수정
 const replyToQnA = async (req, res) => {
@@ -142,9 +144,9 @@ const searchQnAs = async (req, res) => {
     // 검색 조건 설정
     if (searchType && query) {
         if (searchType === 'UserID') {
-            whereCondition.UserID = { [Op.like]: `%${query}%` };
-        } else if (searchType === 'Title') {
-            whereCondition.Title = { [Op.like]: `%${query}%` };
+            whereCondition['$User.LoginID$'] = { [Op.like]: `%${query}%` }; // User 테이블의 LoginID를 검색
+        } else if (searchType === 'ProductID') {
+            whereCondition.ProductID = { [Op.like]: `%${query}%` }; // ProductID로 검색
         } else if (searchType === 'Content') {
             whereCondition.Content = { [Op.like]: `%${query}%` };
         }
@@ -156,12 +158,10 @@ const searchQnAs = async (req, res) => {
 
     // 날짜 필터링 설정
     if (startDate && endDate) {
-        
         console.log('Date range:', new Date(startDate), new Date(endDate)); // 날짜 필터 디버깅 로그
         whereCondition.CreatedAt = {
             [Op.between]: [new Date(startDate), new Date(endDate)],
         };
-        
     }
 
     try {
@@ -185,6 +185,7 @@ const searchQnAs = async (req, res) => {
         res.status(500).json({ message: 'QnA 검색 실패' });
     }
 };
+
 
 module.exports = {
     getQnAs,

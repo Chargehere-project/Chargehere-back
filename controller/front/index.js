@@ -893,19 +893,40 @@ const login = async (req, res) => {
         }
     };
 
-    const usercoupon = async(req,res) =>{
-        try{
-            const {userId} = req.body
-            console.log(req.body,'쿠폰쿠폰');
-            const find = await UserCoupon.findOne({where: { UserID: userId }})
-            res.json({result: true, data: find });
-        }catch(error){
+    const usercoupon = async (req, res) => {
+        try {
+            const { userId } = req.body;
+            console.log(req.body, '쿠폰쿠폰');
+    
+            const find = await UserCoupon.findAll({
+                where: { 
+                    UserID: userId, 
+                    IsUsed: 0 // 사용되지 않은 쿠폰만
+                },
+                include: [
+                    {
+                        model: Coupons,
+                        attributes: ['CouponName', 'DiscountAmount', 'ExpirationDate'],
+                        where: {
+                            ExpirationDate: { [Op.gte]: new Date() }, // 만료되지 않은 쿠폰만
+                        },
+                    },
+                ],
+            });
+    
+            if (!find || find.length === 0) {
+                return res.status(404).json({ result: false, message: '사용 가능한 쿠폰이 없습니다.' });
+            }
+    
+            res.json({ result: true, data: find });
+        } catch (error) {
+            console.error('쿠폰 조회 중 오류:', error);
             res.status(500).json({
                 result: false,
-                message: '쿠폰 조회 중 오류가 발생했습니다.'
+                message: '쿠폰 조회 중 오류가 발생했습니다.',
             });
         }
-    }
+    };
 
     const transaction = async(req, res) => {
         try {
@@ -920,7 +941,8 @@ const login = async (req, res) => {
                 paymentMethod, 
                 status,
                 recipientInfo,
-                orderItems  // orderItems 추가
+                orderItems,  // orderItems 추가
+                couponUsed
             } = req.body;
 
             // 트랜잭션 생성
@@ -944,6 +966,12 @@ const login = async (req, res) => {
                 },
                 { where: { OrderListID: orderListId } }
             );
+            if (couponUsed) {
+                await UserCoupon.update(
+                    { IsUsed: 1 }, // 쿠폰 사용 처리
+                    { where: { CouponID: couponUsed, UserID: userId } }
+                );
+            }
 
             // 포인트 사용 기록 
             if (pointUsed > 0) {
@@ -957,6 +985,7 @@ const login = async (req, res) => {
                     ChargeType: 'Used'
                 });
 
+                
                 // 사용자 포인트 차감
                 await User.decrement('Points', {
                     by: pointUsed,

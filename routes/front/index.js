@@ -49,7 +49,8 @@ const {
     qas,
     inquiryDetail,
     countqna,
-    verifyToken
+    verifyToken,
+    button
     
 } = require('../../controller/front');
 const router = express.Router();
@@ -104,6 +105,7 @@ router.put('/user/updateprofile', updateprofile);
 router.get('/user/profile', auth, getProfile);
 router.post('/auth/verify', verifyToken);
 router.post('/mall/cs',writecs)
+router.post('/button',button)
 router.get('/inquiries',inquiries)
 router.get('/inquiry/:id',inquiryDetail)
 router.post('/qas',qas)

@@ -1743,7 +1743,17 @@ const countqna = async(req,res) =>{
         res.status(500).json({ error: 'Error fetching Q&A count' });
     }
 }
-
+const button = async(req,res) =>{
+    const {userId} = req.body
+    try{
+        const result = await User.findOne({
+            where: { UserID: userId },
+        })
+        res.json({result:true})
+    }catch(error){
+        res.status(500).json({ error: 'Error fetching Q&A count' });
+    }
+}
 module.exports = {
     signup,
     login,
@@ -1778,6 +1788,7 @@ module.exports = {
     newproducts,
     saleproducts,
     createOrder,
+    button,
     deleteAllCartItems,
     qas,
     checkUser,

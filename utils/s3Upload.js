@@ -7,18 +7,18 @@ const s3 = new AWS.S3({
     region: process.env.AWS_REGION,
 });
 
-const uploadToS3 = async (file) => {
+const uploadToS3 = async (file, customKey = null, contentType = null) => {
     const params = {
         Bucket: process.env.AWS_S3_BUCKET_NAME,
-        Key: `${Date.now()}_${file.originalname}`, // 파일 이름을 유니크하게 지정
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        ACL: 'public-read', // 공개 읽기 권한 부여
+        Key: customKey || `${Date.now()}_${file.originalname || 'file.html'}`, // 파일 이름
+        Body: Buffer.isBuffer(file) ? file : Buffer.from(file), // ArrayBuffer를 Buffer로 변환
+        ContentType: contentType || file.mimetype || 'text/html', // 기본 ContentType
+        ACL: 'public-read', // 공개 읽기 권한
     };
 
     try {
         const data = await s3.upload(params).promise();
-        return data.Location; // 업로드된 파일의 URL 반환
+        return data.Location; // S3 URL 반환
     } catch (error) {
         console.error('S3 업로드 오류:', error);
         throw error;

@@ -57,11 +57,21 @@ const getProducts = async (req, res) => {
 const createProduct = async (req, res) => {
     const { name, price, discountRate, description, status, categoryId } = req.body;
 
-    // S3에 이미지 업로드 처리
+    // S3에 HTML 파일 저장
+    let htmlUrl = null;
+    try {
+        const htmlFileName = `product_description_${Date.now()}.html`;
+        const htmlBuffer = Buffer.from(description, 'utf-8'); // HTML 데이터를 Buffer로 변환
+        htmlUrl = await uploadToS3(htmlBuffer, htmlFileName, 'text/html'); // S3에 저장
+    } catch (error) {
+        return res.status(500).json({ message: '상세 내용 업로드 실패', error: error.message });
+    }
+
+    // 썸네일 이미지 업로드
     let imageUrl = null;
     if (req.file) {
         try {
-            imageUrl = await uploadToS3(req.file); // 업로드된 이미지 URL
+            imageUrl = await uploadToS3(req.file.buffer, `product_thumbnail_${Date.now()}.jpg`, req.file.mimetype);
         } catch (error) {
             return res.status(500).json({ message: '이미지 업로드 실패', error: error.message });
         }
@@ -72,11 +82,12 @@ const createProduct = async (req, res) => {
             ProductName: name,
             Price: price,
             Discount: discountRate,
-            Image: imageUrl, // S3에서 받은 이미지 URL을 저장
-            DetailInfo: description,
+            Image: imageUrl, // 썸네일 이미지 URL
+            DetailInfo: htmlUrl, // HTML 파일의 S3 URL
             CategoryID: categoryId,
-            Status: status || 'active', // 기본 상태는 'active'
+            Status: status || 'active',
         });
+
         res.json({ message: '상품이 성공적으로 등록되었습니다.', product: newProduct });
     } catch (error) {
         console.error('상품 등록 실패:', error);
@@ -84,36 +95,42 @@ const createProduct = async (req, res) => {
     }
 };
 
-// 상품 수정
 const editProduct = async (req, res) => {
     const { productId } = req.params;
     const { name, price, discountRate, description, status } = req.body;
 
-    let imageUrl = null;
+    const product = await Products.findByPk(productId);
+    if (!product) {
+        return res.status(404).json({ message: '해당 상품을 찾을 수 없습니다.' });
+    }
+
+    // S3에 HTML 파일 업데이트
+    let htmlUrl = product.DetailInfo; // 기존 URL 유지
+    try {
+        const htmlFileName = `product_description_${productId}.html`;
+        const htmlBuffer = Buffer.from(description, 'utf-8');
+        htmlUrl = await uploadToS3(htmlBuffer, htmlFileName, 'text/html');
+    } catch (error) {
+        return res.status(500).json({ message: '상세 내용 업데이트 실패', error: error.message });
+    }
+
+    // 썸네일 이미지 업로드
+    let imageUrl = product.Image; // 기존 URL 유지
     if (req.file) {
         try {
-            imageUrl = await uploadToS3(req.file); // 업로드된 이미지 URL
+            imageUrl = await uploadToS3(req.file.buffer, `product_thumbnail_${Date.now()}.jpg`, req.file.mimetype);
         } catch (error) {
             return res.status(500).json({ message: '이미지 업로드 실패', error: error.message });
         }
     }
 
     try {
-        const product = await Products.findByPk(productId);
-        if (!product) {
-            return res.status(404).json({ message: '해당 상품을 찾을 수 없습니다.' });
-        }
-
         product.ProductName = name;
         product.Price = price;
         product.Discount = discountRate;
-        product.DetailInfo = description;
+        product.DetailInfo = htmlUrl; // 새로운 HTML 파일의 URL 저장
         product.Status = status;
-
-        // 이미지가 새로 업로드된 경우에만 업데이트
-        if (imageUrl) {
-            product.Image = imageUrl;
-        }
+        product.Image = imageUrl;
 
         await product.save();
         res.json({ message: '상품이 성공적으로 수정되었습니다.', product });
@@ -122,6 +139,9 @@ const editProduct = async (req, res) => {
         res.status(500).json({ message: '상품 수정에 실패했습니다.', error });
     }
 };
+
+
+
 
 // 상품 삭제
 const deleteProduct = async (req, res) => {

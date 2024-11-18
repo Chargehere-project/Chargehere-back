@@ -3,6 +3,9 @@ const { Products } = require('../../models');
 const { Op } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
+const uploadToS3 = require('../../utils/s3Upload');
+const AWS = require('aws-sdk'); // AWS SDK 불러오기
+const s3 = new AWS.S3(); // S3 인스턴스를 생성
 
 // 상품 목록 조회 기능 - 페이지네이션 적용
 const getProducts = async (req, res) => {
@@ -50,18 +53,26 @@ const getProducts = async (req, res) => {
     }
 };
 
-
 // 상품 등록
 const createProduct = async (req, res) => {
     const { name, price, discountRate, description, status, categoryId } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : null; // 파일이 있을 경우 경로 지정
+
+    // S3에 이미지 업로드 처리
+    let imageUrl = null;
+    if (req.file) {
+        try {
+            imageUrl = await uploadToS3(req.file); // 업로드된 이미지 URL
+        } catch (error) {
+            return res.status(500).json({ message: '이미지 업로드 실패', error: error.message });
+        }
+    }
 
     try {
         const newProduct = await Products.create({
             ProductName: name,
             Price: price,
             Discount: discountRate,
-            Image: image, // 이미지 경로 설정
+            Image: imageUrl, // S3에서 받은 이미지 URL을 저장
             DetailInfo: description,
             CategoryID: categoryId,
             Status: status || 'active', // 기본 상태는 'active'
@@ -73,12 +84,19 @@ const createProduct = async (req, res) => {
     }
 };
 
-
 // 상품 수정
 const editProduct = async (req, res) => {
     const { productId } = req.params;
     const { name, price, discountRate, description, status } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : null;
+
+    let imageUrl = null;
+    if (req.file) {
+        try {
+            imageUrl = await uploadToS3(req.file); // 업로드된 이미지 URL
+        } catch (error) {
+            return res.status(500).json({ message: '이미지 업로드 실패', error: error.message });
+        }
+    }
 
     try {
         const product = await Products.findByPk(productId);
@@ -93,8 +111,8 @@ const editProduct = async (req, res) => {
         product.Status = status;
 
         // 이미지가 새로 업로드된 경우에만 업데이트
-        if (image) {
-            product.Image = image;
+        if (imageUrl) {
+            product.Image = imageUrl;
         }
 
         await product.save();
@@ -104,11 +122,6 @@ const editProduct = async (req, res) => {
         res.status(500).json({ message: '상품 수정에 실패했습니다.', error });
     }
 };
-
-
-
-
-
 
 // 상품 삭제
 const deleteProduct = async (req, res) => {
@@ -157,36 +170,52 @@ const updateProductStatus = async (req, res) => {
 
 // 상품 이미지 삭제 함수
 const deleteProductImage = async (req, res) => {
-    console.log('deleteProductImage 함수 호출됨:', req.params.productId);
+    const { productId } = req.params;
+    const product = await Products.findByPk(productId);
+
+    if (!product || !product.Image) {
+        return res.status(404).json({ message: '이미지를 찾을 수 없습니다.' });
+    }
+
+    const imageUrl = product.Image; // S3 URL
+    const fileName = imageUrl.split('/').pop(); // URL에서 파일 이름을 추출
+
+    // S3에서 파일 삭제
+    const params = {
+        Bucket: 'your-bucket-name', // S3 버킷 이름
+        Key: fileName, // S3에 저장된 파일 이름
+    };
+
+    s3.deleteObject(params, async (err, data) => {
+        if (err) {
+            console.error('S3에서 파일 삭제 실패:', err);
+            return res.status(500).json({ message: '이미지 삭제에 실패했습니다.', error: err });
+        }
+
+        // S3에서 삭제 성공 후, DB에서 이미지 경로 제거
+        product.Image = null;
+        await product.save();
+
+        res.json({ message: '이미지가 성공적으로 삭제되었습니다.' });
+    });
+};
+
+const deleteImageUrlInDB = async (req, res) => {
+    const { productId } = req.params;
     try {
-        const { productId } = req.params;
         const product = await Products.findByPk(productId);
-
-        if (!product || !product.Image) {
-            return res.status(404).json({ message: '이미지를 찾을 수 없습니다.' });
+        if (!product) {
+            return res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
         }
 
-        // 경로 수정: 중복된 uploads 폴더 제거
-        const imagePath = path.join(__dirname, '../../uploads', product.Image.replace('/uploads/', ''));
+        // 이미지 URL만 DB에서 제거
+        product.Image = null;
+        await product.save();
 
-        // 파일 삭제
-        fs.unlink(imagePath, async (err) => {
-            if (err) {
-                console.error('파일 삭제 실패:', err);
-                return res.status(500).json({ message: '이미지 삭제에 실패했습니다.' });
-            }
-
-            // DB에서 이미지 경로 제거
-            product.Image = null;
-            await product.save();
-
-            res.json({ message: '이미지가 성공적으로 삭제되었습니다.' });
-        });
+        res.json({ message: '이미지 URL이 DB에서 제거되었습니다.' });
     } catch (error) {
-        console.error('이미지 삭제 오류:', error);
-        if (!res.headersSent) { // 이미 응답을 보냈는지 확인
-            res.status(500).json({ message: '이미지 삭제 오류가 발생했습니다.' });
-        }
+        console.error('이미지 URL 제거 실패:', error);
+        res.status(500).json({ message: '이미지 URL 제거에 실패했습니다.', error });
     }
 };
 
@@ -261,4 +290,5 @@ module.exports = {
     updateProductStatus,
     deleteProductImage,
     searchProducts,
+    deleteImageUrlInDB,
 };

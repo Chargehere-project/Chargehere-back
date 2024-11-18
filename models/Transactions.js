@@ -11,20 +11,21 @@ module.exports = (seq, DataTypes) => {
                 type: DataTypes.INTEGER,
                 allowNull: false, // 트랜잭션은 반드시 유저와 연관되어야 함
             },
-            OrderListID: {  // OrderID를 OrderListID로 변경
+            OrderListID: {
+                // OrderID를 OrderListID로 변경
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
                     model: 'OrderList',
-                    key: 'OrderListID'
-                }
+                    key: 'OrderListID',
+                },
             },
             TotalAmount: {
-                type: DataTypes.DECIMAL(10, 2),
+                type: DataTypes.INTEGER,
                 allowNull: false, // 전체 결제 금액 (포인트 포함)
             },
             PaymentAmount: {
-                type: DataTypes.DECIMAL(10, 2),
+                type: DataTypes.INTEGER,
                 allowNull: false, // 실제 결제된 금액
             },
             PointUsed: {

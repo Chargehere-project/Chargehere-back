@@ -53,6 +53,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+
 // /uploads 폴더를 정적으로 제공
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
